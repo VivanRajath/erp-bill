@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales Report - {{ block.super }}{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📊 Sales Report</h2>
+    <div>
+        <a href="{% url 'reports:export_sales' 'xlsx' %}{% if start_date or end_date %}?{% if start_date %}start_date={{ start_date }}{% endif %}{% if start_date and end_date %}&{% endif %}{% if end_date %}end_date={{ end_date }}{% endif %}{% endif %}" class="btn btn-success me-2">
+            📤 Export XLSX
+        </a>
+        <a href="{% url 'reports:reports_dashboard' %}" class="btn btn-outline-secondary">🏠 Dashboard</a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">🔍 Filters</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="start_date" class="form-label">Start Date</label>
+                <input type="date" id="start_date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-4">
+                <label for="end_date" class="form-label">End Date</label>
+                <input type="date" id="end_date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid gap-2 d-md-flex">
+                    <button type="submit" class="btn btn-primary flex-fill">Apply Filters</button>
+                    <a href="{% url 'reports:sales_report' %}" class="btn btn-outline-secondary">Clear</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Summary -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">📈 Summary</h5>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-3">
+                <h4 class="text-primary">{{ invoices|length }}</h4>
+                <p class="text-muted">Total Invoices</p>
+            </div>
+            <div class="col-md-3">
+                <h4 class="text-success">₹{{ total_sales }}</h4>
+                <p class="text-muted">Total Sales</p>
+            </div>
+            <div class="col-md-3">
+                <h4 class="text-info">₹{{ total_gst|floatformat:2 }}</h4>
+                <p class="text-muted">Total GST</p>
+            </div>
+            <div class="col-md-3">
+                <h4 class="text-warning">₹{{ average_sale|floatformat:2 }}</h4>
+                <p class="text-muted">Average Sale</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sales Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">📋 Sales Details</h5>
+    </div>
+    <div class="card-body">
+        {% if invoices %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th class="text-end">Base Amount</th>
+                            <th class="text-end">GST Amount</th>
+                            <th class="text-end">Total Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in invoices %}
+                        <tr>
+                            <td>
+                                <strong>{{ invoice.number }}</strong>
+                            </td>
+                            <td>{{ invoice.date|date:"d M Y" }}</td>
+                            <td>{{ invoice.get_customer_display_name }}</td>
+                            <td class="text-end">₹{{ invoice.total_base }}</td>
+                            <td class="text-end">₹{{ invoice.total_tax }}</td>
+                            <td class="text-end"><strong>₹{{ invoice.total_incl }}</strong></td>
+                            <td>
+                                {% if invoice.payment_status == 'paid' %}
+                                    <span class="badge bg-success">Paid</span>
+                                {% elif invoice.payment_status == 'pending' %}
+                                    <span class="badge bg-warning">Pending</span>
+                                {% elif invoice.payment_status == 'partial' %}
+                                    <span class="badge bg-info">Partial</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{{ invoice.get_payment_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'sales:invoice_detail' invoice.id %}" class="btn btn-outline-primary" title="View">👁️</a>
+                                    <a href="{% url 'sales:invoice_print' invoice.id %}" class="btn btn-outline-secondary" target="_blank" title="Print">🖨️</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-light fw-bold">
+                            <td colspan="3">TOTAL</td>
+                            <td class="text-end">₹{{ total_base|floatformat:2 }}</td>
+                            <td class="text-end">₹{{ total_gst|floatformat:2 }}</td>
+                            <td class="text-end">₹{{ total_sales|floatformat:2 }}</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <div class="mb-3">
+                    <i class="fas fa-chart-line fa-3x text-muted"></i>
+                </div>
+                {% if start_date or end_date %}
+                    <h4 class="text-muted">No sales found</h4>
+                    <p class="text-muted">No sales match your filter criteria</p>
+                    <a href="{% url 'reports:sales_report' %}" class="btn btn-outline-primary">View All Sales</a>
+                {% else %}
+                    <h4 class="text-muted">No sales yet</h4>
+                    <p class="text-muted">Start by creating your first sale</p>
+                    <a href="{% url 'sales:pos_index' %}" class="btn btn-primary">Create First Sale</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

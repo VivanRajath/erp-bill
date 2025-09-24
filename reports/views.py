@@ -50,9 +50,12 @@ def reports_dashboard(request):
     # Recent invoices
     recent_invoices = Invoice.objects.order_by('-created_at')[:10]
     
+    monthly_profit = monthly_earnings - total_spending
+    
     context = {
         'monthly_earnings': monthly_earnings,
         'monthly_spending': total_spending,
+        'monthly_profit': monthly_profit,
         'monthly_sales_count': monthly_sales_count,
         'recent_invoices': recent_invoices,
         'current_month': now.strftime('%B %Y'),
@@ -92,10 +95,18 @@ def monthly_summary(request):
         for movement in purchases
     ) or Decimal('0')
     
+    # Prepare month names for template
+    month_names = [
+        (1, 'January'), (2, 'February'), (3, 'March'), (4, 'April'),
+        (5, 'May'), (6, 'June'), (7, 'July'), (8, 'August'),
+        (9, 'September'), (10, 'October'), (11, 'November'), (12, 'December')
+    ]
+    
     context = {
         'year': year,
         'month': month,
         'month_name': start_date.strftime('%B'),
+        'month_names': month_names,
         'total_earnings': total_earnings,
         'total_spending': total_spending,
         'profit': total_earnings - total_spending,
@@ -121,10 +132,16 @@ def sales_report(request):
     invoices = invoices.order_by('-date')
     
     total_sales = invoices.aggregate(total=Sum('total_incl'))['total'] or Decimal('0')
+    total_base = invoices.aggregate(total=Sum('total_base'))['total'] or Decimal('0')
+    total_gst = invoices.aggregate(total=Sum('total_tax'))['total'] or Decimal('0')
+    average_sale = total_sales / invoices.count() if invoices.count() > 0 else Decimal('0')
     
     context = {
         'invoices': invoices,
         'total_sales': total_sales,
+        'total_base': total_base,
+        'total_gst': total_gst,
+        'average_sale': average_sale,
         'start_date': start_date,
         'end_date': end_date,
         'page_title': 'Sales Report'

@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports Dashboard - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metric-card {
+        background: linear-gradient(135deg, var(--primary-color), #0056b3);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+        transition: transform 0.2s;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .metric-card.earnings {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    }
+    
+    .metric-card.spending {
+        background: linear-gradient(135deg, #dc3545, #e74c3c);
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+    }
+    
+    .metric-card.profit {
+        background: linear-gradient(135deg, #17a2b8, #138496);
+        box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);
+    }
+    
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    
+    .metric-label {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📊 Reports Dashboard</h2>
+    <div>
+        <a href="{% url 'reports:sales_report' %}" class="btn btn-outline-primary me-2">📄 Sales Report</a>
+        <a href="{% url 'reports:monthly_summary' %}" class="btn btn-outline-info">📅 Monthly Summary</a>
+    </div>
+</div>
+
+<!-- Current Month Overview -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">📈 {{ current_month }} Overview</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <div class="metric-card earnings">
+                    <div class="metric-value">₹{{ monthly_earnings }}</div>
+                    <div class="metric-label">Monthly Earnings</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="metric-card spending">
+                    <div class="metric-value">₹{{ monthly_spending }}</div>
+                    <div class="metric-label">Monthly Spending</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="metric-card {% if monthly_profit < 0 %}spending{% else %}profit{% endif %}">
+                    <div class="metric-value">₹{{ monthly_profit|floatformat:2 }}</div>
+                    <div class="metric-label">Net Profit</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="metric-card">
+                    <div class="metric-value">{{ monthly_sales_count }}</div>
+                    <div class="metric-label">Total Sales</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">⚡ Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <a href="{% url 'reports:sales_report' %}" class="btn btn-outline-primary w-100 h-100 d-flex flex-column justify-content-center">
+                            <i class="fas fa-chart-line fa-2x mb-2"></i>
+                            <span>Sales Report</span>
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{% url 'reports:monthly_summary' %}" class="btn btn-outline-success w-100 h-100 d-flex flex-column justify-content-center">
+                            <i class="fas fa-calendar-alt fa-2x mb-2"></i>
+                            <span>Monthly Summary</span>
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{% url 'reports:stock_report' %}" class="btn btn-outline-warning w-100 h-100 d-flex flex-column justify-content-center">
+                            <i class="fas fa-boxes fa-2x mb-2"></i>
+                            <span>Stock Report</span>
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{% url 'reports:export_monthly' 'xlsx' %}?year={{ "now"|date:"Y" }}&month={{ "now"|date:"n" }}" class="btn btn-outline-info w-100 h-100 d-flex flex-column justify-content-center">
+                            <i class="fas fa-download fa-2x mb-2"></i>
+                            <span>Export XLSX</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Invoices -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">📋 Recent Invoices</h5>
+                <a href="{% url 'sales:invoice_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_invoices %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Invoice</th>
+                                    <th>Date</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in recent_invoices %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'sales:invoice_detail' invoice.id %}" class="text-decoration-none">
+                                            {{ invoice.number }}
+                                        </a><br>
+                                        <small class="text-muted">{{ invoice.get_customer_display_name }}</small>
+                                    </td>
+                                    <td>{{ invoice.date|date:"M d" }}</td>
+                                    <td class="text-end">
+                                        <strong>₹{{ invoice.total_incl }}</strong>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-file-invoice fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No recent invoices</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Options -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">📤 Export Options</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6>📅 Monthly Export</h6>
+                <form method="get" action="{% url 'reports:export_monthly' 'xlsx' %}" class="row g-3">
+                    <div class="col-md-6">
+                        <select name="month" class="form-select">
+                            {% for i in "123456789012"|make_list %}
+                                <option value="{{ forloop.counter }}" {% if forloop.counter == "now"|date:"n"|add:"0" %}selected{% endif %}>
+                                    {{ forloop.counter|date:"F" }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <select name="year" class="form-select">
+                            <option value="2023" {% if "2023" == "now"|date:"Y" %}selected{% endif %}>2023</option>
+                            <option value="2024" {% if "2024" == "now"|date:"Y" %}selected{% endif %}>2024</option>
+                            <option value="2025" {% if "2025" == "now"|date:"Y" %}selected{% endif %}>2025</option>
+                            <option value="2026" {% if "2026" == "now"|date:"Y" %}selected{% endif %}>2026</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-file-excel"></i> Export Monthly XLSX
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="col-md-6">
+                <h6>📊 Custom Sales Export</h6>
+                <form method="get" action="{% url 'reports:export_sales' 'xlsx' %}" class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ "now"|date:"Y-m-01" }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ "now"|date:"Y-m-d" }}">
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-info">
+                            <i class="fas fa-file-excel"></i> Export Sales XLSX
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

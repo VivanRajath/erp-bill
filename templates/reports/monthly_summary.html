@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}Monthly Summary - {{ month_name }} {{ year }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📅 Monthly Summary - {{ month_name }} {{ year }}</h2>
+    <div>
+        <a href="{% url 'reports:export_monthly' 'xlsx' %}?year={{ year }}&month={{ month }}" class="btn btn-success me-2">
+            📤 Export XLSX
+        </a>
+        <a href="{% url 'reports:reports_dashboard' %}" class="btn btn-outline-secondary">🏠 Dashboard</a>
+    </div>
+</div>
+
+<!-- Month/Year Selector -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">🔍 Select Month</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <label for="month" class="form-label">Month</label>
+                <select id="month" name="month" class="form-select">
+                    {% for i in "123456789012"|make_list %}
+                        <option value="{{ forloop.counter }}" {% if forloop.counter == month %}selected{% endif %}>
+                            {{ forloop.counter|date:"F" }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="year" class="form-label">Year</label>
+                <select id="year" name="year" class="form-select">
+                    <option value="2023" {% if 2023 == year %}selected{% endif %}>2023</option>
+                    <option value="2024" {% if 2024 == year %}selected{% endif %}>2024</option>
+                    <option value="2025" {% if 2025 == year %}selected{% endif %}>2025</option>
+                    <option value="2026" {% if 2026 == year %}selected{% endif %}>2026</option>
+                </select>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">View Summary</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h4>₹{{ total_earnings }}</h4>
+                <p class="mb-0">Total Earnings</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h4>₹{{ total_spending }}</h4>
+                <p class="mb-0">Total Spending</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-{% if profit >= 0 %}info{% else %}warning{% endif %} text-white">
+            <div class="card-body text-center">
+                <h4>₹{{ profit }}</h4>
+                <p class="mb-0">Net Profit</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h4>{{ invoice_count }}</h4>
+                <p class="mb-0">Total Sales</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Invoices Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">📋 Monthly Sales</h5>
+    </div>
+    <div class="card-body">
+        {% if invoices %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Invoice #</th>
+                            <th>Customer</th>
+                            <th class="text-end">Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in invoices %}
+                        <tr>
+                            <td>{{ invoice.date|date:"d M" }}</td>
+                            <td><strong>{{ invoice.number }}</strong></td>
+                            <td>{{ invoice.get_customer_display_name }}</td>
+                            <td class="text-end"><strong>₹{{ invoice.total_incl }}</strong></td>
+                            <td>
+                                {% if invoice.payment_status == 'paid' %}
+                                    <span class="badge bg-success">Paid</span>
+                                {% elif invoice.payment_status == 'pending' %}
+                                    <span class="badge bg-warning">Pending</span>
+                                {% else %}
+                                    <span class="badge bg-info">{{ invoice.get_payment_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'sales:invoice_detail' invoice.id %}" class="btn btn-outline-primary" title="View">👁️</a>
+                                    <a href="{% url 'sales:invoice_print' invoice.id %}" class="btn btn-outline-secondary" target="_blank" title="Print">🖨️</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-light fw-bold">
+                            <td colspan="3">TOTAL FOR {{ month_name|upper }} {{ year }}</td>
+                            <td class="text-end">₹{{ total_earnings }}</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <div class="mb-3">
+                    <i class="fas fa-calendar-alt fa-3x text-muted"></i>
+                </div>
+                <h4 class="text-muted">No sales in {{ month_name }} {{ year }}</h4>
+                <p class="text-muted">No sales were recorded for this month</p>
+                <a href="{% url 'sales:pos_index' %}" class="btn btn-primary">Start Selling</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
