@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Shop Profile - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>⚙️ Shop Profile</h2>
+    <a href="{% url 'profiles:profile_edit' %}" class="btn btn-primary">✏️ Edit Profile</a>
+</div>
+
+<div class="row">
+    <!-- Shop Information -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">🏪 Shop Information</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">Shop Name:</dt>
+                    <dd class="col-sm-9">{{ shop_profile.shop_name }}</dd>
+                    
+                    <dt class="col-sm-3">GSTIN:</dt>
+                    <dd class="col-sm-9">
+                        {% if shop_profile.gstin %}
+                            {{ shop_profile.gstin }}
+                        {% else %}
+                            <span class="text-muted">Not set</span>
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-3">Phone:</dt>
+                    <dd class="col-sm-9">
+                        {% if shop_profile.phone %}
+                            {{ shop_profile.phone }}
+                        {% else %}
+                            <span class="text-muted">Not set</span>
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-3">Address:</dt>
+                    <dd class="col-sm-9">
+                        {% if shop_profile.address %}
+                            {{ shop_profile.address|linebreaks }}
+                        {% else %}
+                            <span class="text-muted">Not set</span>
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-3">Default GST Rate:</dt>
+                    <dd class="col-sm-9">{{ shop_profile.default_gst_rate }}%</dd>
+                    
+                    <dt class="col-sm-3">Invoice Prefix:</dt>
+                    <dd class="col-sm-9">{{ shop_profile.invoice_prefix }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Settings & Security -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">🔒 Security Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>Inventory Password</h6>
+                    <p class="text-muted small">
+                        {% if shop_profile.inventory_password_hash %}
+                            Password is set and active.
+                        {% else %}
+                            No password set. Inventory is accessible without password.
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'profiles:set_inventory_password' %}" class="btn btn-outline-warning btn-sm">
+                        {% if shop_profile.inventory_password_hash %}
+                            Change Password
+                        {% else %}
+                            Set Password
+                        {% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">📊 Quick Links</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'sales:pos_index' %}" class="btn btn-outline-primary">🏪 Point of Sale</a>
+                    <a href="{% url 'inventory:inventory_login' %}" class="btn btn-outline-secondary">📦 Inventory</a>
+                    <a href="{% url 'reports:reports_dashboard' %}" class="btn btn-outline-info">📊 Reports</a>
+                    <a href="/admin/" class="btn btn-outline-dark">🛠️ Admin Panel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Shop Profile - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>✏️ Edit Shop Profile</h2>
+    <a href="{% url 'profiles:profile_detail' %}" class="btn btn-outline-secondary">← Back to Profile</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">🏪 Shop Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="shop_name" class="form-label">Shop Name *</label>
+                        <input type="text" 
+                               id="shop_name" 
+                               name="shop_name" 
+                               class="form-control" 
+                               value="{{ shop_profile.shop_name }}"
+                               required>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="gstin" class="form-label">GSTIN</label>
+                                <input type="text" 
+                                       id="gstin" 
+                                       name="gstin" 
+                                       class="form-control" 
+                                       value="{{ shop_profile.gstin|default:'' }}"
+                                       placeholder="e.g., 22AAAAA0000A1Z5">
+                                <div class="form-text">Optional - Goods and Services Tax Identification Number</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Phone Number</label>
+                                <input type="tel" 
+                                       id="phone" 
+                                       name="phone" 
+                                       class="form-control" 
+                                       value="{{ shop_profile.phone|default:'' }}"
+                                       placeholder="e.g., +91 9876543210">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Address</label>
+                        <textarea id="address" 
+                                  name="address" 
+                                  class="form-control" 
+                                  rows="3"
+                                  placeholder="Shop address for invoices...">{{ shop_profile.address|default:'' }}</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="default_gst_rate" class="form-label">Default GST Rate (%)</label>
+                                <input type="number" 
+                                       id="default_gst_rate" 
+                                       name="default_gst_rate" 
+                                       class="form-control" 
+                                       value="{{ shop_profile.default_gst_rate }}"
+                                       min="0" 
+                                       max="28" 
+                                       step="0.01"
+                                       required>
+                                <div class="form-text">Default tax rate for new products</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="invoice_prefix" class="form-label">Invoice Prefix</label>
+                                <input type="text" 
+                                       id="invoice_prefix" 
+                                       name="invoice_prefix" 
+                                       class="form-control" 
+                                       value="{{ shop_profile.invoice_prefix }}"
+                                       maxlength="10"
+                                       required>
+                                <div class="form-text">Prefix for invoice numbers (e.g., INV, BILL)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'profiles:profile_detail' %}" class="btn btn-outline-secondary me-md-2">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            💾 Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">💡 Tips</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        <strong>Shop Name:</strong> This will appear on all invoices
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        <strong>GSTIN:</strong> Required for tax compliance if applicable
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        <strong>GST Rate:</strong> Common rates are 5%, 12%, 18%, 28%
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        <strong>Invoice Prefix:</strong> Keep it short and recognizable
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
