@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice {{ invoice.number }}</title>
+    
+    <style>
+        @media print {
+            body { margin: 0; font-size: 12px; }
+            .no-print { display: none !important; }
+            .page-break { page-break-after: always; }
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            color: #333;
+        }
+        
+        .invoice-header {
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .company-info {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        
+        .invoice-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        .bill-to, .invoice-meta {
+            width: 48%;
+        }
+        
+        .section-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #007bff;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        
+        .items-table th,
+        .items-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .items-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .totals-section {
+            float: right;
+            width: 300px;
+            margin-top: 20px;
+        }
+        
+        .totals-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .totals-table td {
+            padding: 5px 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .totals-table .total-row {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .footer {
+            clear: both;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            text-align: center;
+            color: #666;
+        }
+        
+        .print-actions {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+    </style>
+</head>
+<body>
+    <!-- Print Actions -->
+    <div class="print-actions no-print">
+        <button class="btn" onclick="window.print()">🖨️ Print Invoice</button>
+        <button class="btn btn-secondary" onclick="window.close()">❌ Close</button>
+        <a href="{% url 'sales:pos_index' %}" class="btn btn-secondary">🏪 Back to POS</a>
+    </div>
+    
+    <!-- Invoice Content -->
+    <div class="invoice-container">
+        <!-- Header -->
+        <div class="invoice-header">
+            <div class="company-info">
+                {% if shop_profile.logo %}
+                    <img src="{{ shop_profile.logo.url }}" alt="Logo" style="max-height: 80px; margin-bottom: 10px;">
+                {% endif %}
+                <div class="company-name">{{ shop_profile.shop_name }}</div>
+                {% if shop_profile.address %}
+                    <div>{{ shop_profile.address|linebreaks }}</div>
+                {% endif %}
+                {% if shop_profile.phone %}
+                    <div>📞 {{ shop_profile.phone }}</div>
+                {% endif %}
+                {% if shop_profile.gstin %}
+                    <div><strong>GSTIN:</strong> {{ shop_profile.gstin }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Invoice Details -->
+        <div class="invoice-details">
+            <div class="bill-to">
+                <div class="section-title">Bill To:</div>
+                <div>
+                    <strong>{{ invoice.get_customer_display_name }}</strong><br>
+                    {% if invoice.customer %}
+                        {% if invoice.customer.phone %}📞 {{ invoice.customer.phone }}<br>{% endif %}
+                        {% if invoice.customer.email %}📧 {{ invoice.customer.email }}<br>{% endif %}
+                        {% if invoice.customer.address %}{{ invoice.customer.address|linebreaks }}{% endif %}
+                        {% if invoice.customer.gstin %}<strong>GSTIN:</strong> {{ invoice.customer.gstin }}{% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="invoice-meta">
+                <div class="section-title">Invoice Details:</div>
+                <table style="width: 100%;">
+                    <tr>
+                        <td><strong>Invoice No:</strong></td>
+                        <td>{{ invoice.number }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Date:</strong></td>
+                        <td>{{ invoice.date|date:"d M Y" }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Time:</strong></td>
+                        <td>{{ invoice.created_at|date:"H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Status:</strong></td>
+                        <td>{{ invoice.get_payment_status_display }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Items Table -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>Description</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-right">Unit Price<br><small>(Incl. GST)</small></th>
+                    <th class="text-center">GST%</th>
+                    <th class="text-right">Base Amount</th>
+                    <th class="text-right">GST Amount</th>
+                    <th class="text-right">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in invoice.items.all %}
+                <tr>
+                    <td class="text-center">{{ forloop.counter }}</td>
+                    <td>
+                        {{ item.description }}
+                        {% if item.product %}
+                            <br><small class="text-muted">SKU: {{ item.product.sku }}</small>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">{{ item.quantity }}</td>
+                    <td class="text-right">₹{{ item.unit_price_incl }}</td>
+                    <td class="text-center">{{ item.tax_rate }}%</td>
+                    <td class="text-right">₹{{ item.base_amount }}</td>
+                    <td class="text-right">₹{{ item.tax_amount }}</td>
+                    <td class="text-right">₹{{ item.total_amount }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Totals -->
+        <div class="totals-section">
+            <table class="totals-table">
+                <tr>
+                    <td><strong>Subtotal (Base):</strong></td>
+                    <td class="text-right">₹{{ invoice.total_base }}</td>
+                </tr>
+                <tr>
+                    <td><strong>GST Amount:</strong></td>
+                    <td class="text-right">₹{{ invoice.total_tax }}</td>
+                </tr>
+                <tr class="total-row">
+                    <td><strong>Total Amount:</strong></td>
+                    <td class="text-right"><strong>₹{{ invoice.total_incl }}</strong></td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Thank you for your business!</strong></p>
+            {% if invoice.notes %}
+                <p><em>{{ invoice.notes }}</em></p>
+            {% endif %}
+            <p><small>Generated on {{ invoice.created_at|date:"d M Y, H:i" }}</small></p>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-focus for print dialog
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

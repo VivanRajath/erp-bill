@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Invoices - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📄 Invoices</h2>
+    <a href="{% url 'sales:pos_index' %}" class="btn btn-primary">➕ New Sale</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th class="text-end">Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in page_obj %}
+                        <tr>
+                            <td>
+                                <strong>{{ invoice.number }}</strong>
+                            </td>
+                            <td>{{ invoice.date|date:"d M Y" }}</td>
+                            <td>{{ invoice.get_customer_display_name }}</td>
+                            <td class="text-end">₹{{ invoice.total_incl }}</td>
+                            <td>
+                                {% if invoice.payment_status == 'paid' %}
+                                    <span class="badge bg-success">Paid</span>
+                                {% elif invoice.payment_status == 'pending' %}
+                                    <span class="badge bg-warning">Pending</span>
+                                {% elif invoice.payment_status == 'partial' %}
+                                    <span class="badge bg-info">Partial</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{{ invoice.get_payment_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'sales:invoice_detail' invoice.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                                <a href="{% url 'sales:invoice_print' invoice.id %}" class="btn btn-sm btn-outline-secondary" target="_blank">Print</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+                <nav class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <div class="mb-3">
+                    <i class="fas fa-file-invoice fa-3x text-muted"></i>
+                </div>
+                <h4 class="text-muted">No invoices found</h4>
+                <p class="text-muted">Start by creating your first sale</p>
+                <a href="{% url 'sales:pos_index' %}" class="btn btn-primary">Create First Sale</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
