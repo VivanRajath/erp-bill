@@ -5,9 +5,7 @@
     <h4 class="mb-0">Invoice {{ invoice.number }}</h4>
     <div class="d-flex gap-2">
         <a class="btn btn-outline-secondary" href="{% url 'sales:invoice_list' %}">Back</a>
-        <a class="btn btn-primary" href="{% url 'sales:invoice_print' invoice.id 'a4' %}">Print A4</a>
-        <a class="btn btn-primary" href="{% url 'sales:invoice_print' invoice.id 'a5' %}">Print A5</a>
-        <a class="btn btn-primary" href="{% url 'sales:invoice_print' invoice.id 'thermal' %}">Thermal</a>
+        <a class="btn btn-primary" href="{% url 'sales:invoice_print' invoice.id %}">Print</a>
     </div>
     </div>
 
@@ -28,7 +26,7 @@
                 <h6 class="text-muted">Details</h6>
                 <div>Invoice #: <strong>{{ invoice.number }}</strong></div>
                 <div>Date: <strong>{{ invoice.date|date:"d M Y" }}</strong></div>
-                <div>Status: <span class="badge bg-secondary">{{ invoice.get_payment_status_display }}</span></div>
+                
             </div>
         </div>
     </div>

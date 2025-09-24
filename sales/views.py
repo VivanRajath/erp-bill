@@ -10,7 +10,7 @@ from decimal import Decimal
 import json
 
 from .models import Invoice, InvoiceItem, Customer
-from inventory.models import Product
+from inventory.models import Product, StockMovement
 from profiles.models import ShopProfile
 
 
@@ -75,6 +75,59 @@ def product_lookup_api(request):
         'can_sell': product.can_sell(1),
         'track_stock': product.track_stock
     })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def create_product_api(request):
+    """API to create new product from POS"""
+    try:
+        data = json.loads(request.body)
+        name = data.get('name', '').strip()
+        price_incl_tax = data.get('price_incl_tax', 0)
+        cost_price = data.get('cost_price', 0)
+        stock_quantity = data.get('stock_quantity', 0)
+        tax_rate = data.get('tax_rate', 0)
+        track_stock = data.get('track_stock', False)
+        collection_name = data.get('collection', 'Others')
+        
+        if not name:
+            return JsonResponse({'error': 'Product name is required'}, status=400)
+        
+        with transaction.atomic():
+            # Get or create collection
+            from inventory.models import Collection
+            collection, _ = Collection.objects.get_or_create(name=collection_name)
+            
+            # Create product
+            product = Product.objects.create(
+                name=name,
+                collection=collection,
+                price_incl_tax=Decimal(str(price_incl_tax)),
+                cost_price=Decimal(str(cost_price)),
+                tax_rate=Decimal(str(tax_rate)),
+                track_stock=track_stock,
+                stock_quantity=Decimal(str(stock_quantity))
+            )
+            
+            # Create stock movement for initial stock if quantity > 0
+            if Decimal(str(stock_quantity)) > 0:
+                StockMovement.objects.create(
+                    product=product,
+                    qty_change=Decimal(str(stock_quantity)),
+                    reason='purchase',
+                    unit_cost=Decimal(str(cost_price)),
+                    reference='POS Created'
+                )
+        
+        return JsonResponse({
+            'success': True,
+            'product_id': product.id,
+            'message': f'Product "{name}" created successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @csrf_exempt
@@ -146,25 +199,16 @@ def invoice_detail(request, invoice_id):
     return render(request, 'sales/invoice_detail.html', context)
 
 
-def invoice_print(request, invoice_id, template='a4'):
-    """Print invoice in specified format"""
+def invoice_print(request, invoice_id):
+    """Print invoice in A4 format only"""
     invoice = get_object_or_404(Invoice, id=invoice_id)
     shop_profile = ShopProfile.get_shop_profile()
-    
-    templates = {
-        'a4': 'sales/invoice_print_a4.html',
-        'a5': 'sales/invoice_print_a5.html',
-        'thermal': 'sales/invoice_print_thermal.html'
-    }
-    
-    template_name = templates.get(template, templates['a4'])
     
     context = {
         'invoice': invoice,
         'shop_profile': shop_profile,
-        'print_template': template
     }
-    return render(request, template_name, context)
+    return render(request, 'sales/invoice_print_a4.html', context)
 
 
 def invoice_list(request):

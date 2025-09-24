@@ -67,11 +67,11 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h4 class="mb-0">Active</h4>
-                        <small>Inventory Status</small>
+                        <h4 class="mb-0">₹{{ total_investment|floatformat:2 }}</h4>
+                        <small>Total Investment</small>
                     </div>
                     <div class="align-self-center">
-                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                        <i class="fas fa-rupee-sign fa-2x opacity-75"></i>
                     </div>
                 </div>
             </div>
@@ -113,6 +113,66 @@
                         </a>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Purchases -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">💰 Recent Purchases</h5>
+                <a href="{% url 'inventory:stock_purchase' %}" class="btn btn-sm btn-outline-success">Record Purchase</a>
+            </div>
+            <div class="card-body">
+                {% if recent_purchases %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date/Time</th>
+                                    <th>Product</th>
+                                    <th class="text-end">Quantity</th>
+                                    <th class="text-end">Unit Cost</th>
+                                    <th class="text-end">Total Investment</th>
+                                    <th>Reference</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for purchase in recent_purchases %}
+                                <tr>
+                                    <td>{{ purchase.timestamp|date:"M d, H:i" }}</td>
+                                    <td>
+                                        <strong>{{ purchase.product.name }}</strong><br>
+                                        <small class="text-muted">{{ purchase.product.sku }}</small>
+                                    </td>
+                                    <td class="text-end">{{ purchase.qty_change }}</td>
+                                    <td class="text-end">₹{{ purchase.unit_cost|floatformat:2 }}</td>
+                                    <td class="text-end">
+                                        <strong class="text-success">₹{{ purchase.total_cost|floatformat:2 }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if purchase.reference %}
+                                            <small class="text-muted">{{ purchase.reference }}</small>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Recent Purchases</h5>
+                        <p class="text-muted">Record your first purchase to start tracking investment.</p>
+                        <a href="{% url 'inventory:stock_purchase' %}" class="btn btn-success">Record Purchase</a>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>

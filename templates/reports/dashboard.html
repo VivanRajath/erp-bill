@@ -37,11 +37,32 @@
         font-size: 2.5rem;
         font-weight: bold;
         margin-bottom: 10px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
     
     .metric-label {
         font-size: 1.1rem;
         opacity: 0.9;
+        font-weight: 500;
+    }
+    
+    .small-text {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .table th {
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    
+    .table td {
+        font-size: 0.9rem;
+    }
+    
+    .btn-sm {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
     }
     
     .chart-container {
@@ -55,12 +76,16 @@
 {% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <!-- Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>📊 Reports Dashboard</h2>
     <div>
         <a href="{% url 'reports:sales_report' %}" class="btn btn-outline-primary me-2">📄 Sales Report</a>
-        <a href="{% url 'reports:monthly_summary' %}" class="btn btn-outline-info">📅 Monthly Summary</a>
+        <a href="{% url 'reports:monthly_summary' %}" class="btn btn-outline-info me-2">📅 Monthly Summary</a>
+        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#factoryResetModal">
+            🔄 Factory Reset
+        </button>
     </div>
 </div>
 
@@ -198,24 +223,33 @@
                 <h6>📅 Monthly Export</h6>
                 <form method="get" action="{% url 'reports:export_monthly' 'xlsx' %}" class="row g-3">
                     <div class="col-md-6">
-                        <select name="month" class="form-select">
-                            {% for i in "123456789012"|make_list %}
-                                <option value="{{ forloop.counter }}" {% if forloop.counter == "now"|date:"n"|add:"0" %}selected{% endif %}>
-                                    {{ forloop.counter|date:"F" }}
-                                </option>
-                            {% endfor %}
+                        <label class="form-label small">Month</label>
+                        <select name="month" class="form-select form-select-sm" required>
+                            <option value="1" {% if "now"|date:"n" == "1" %}selected{% endif %}>January</option>
+                            <option value="2" {% if "now"|date:"n" == "2" %}selected{% endif %}>February</option>
+                            <option value="3" {% if "now"|date:"n" == "3" %}selected{% endif %}>March</option>
+                            <option value="4" {% if "now"|date:"n" == "4" %}selected{% endif %}>April</option>
+                            <option value="5" {% if "now"|date:"n" == "5" %}selected{% endif %}>May</option>
+                            <option value="6" {% if "now"|date:"n" == "6" %}selected{% endif %}>June</option>
+                            <option value="7" {% if "now"|date:"n" == "7" %}selected{% endif %}>July</option>
+                            <option value="8" {% if "now"|date:"n" == "8" %}selected{% endif %}>August</option>
+                            <option value="9" {% if "now"|date:"n" == "9" %}selected{% endif %}>September</option>
+                            <option value="10" {% if "now"|date:"n" == "10" %}selected{% endif %}>October</option>
+                            <option value="11" {% if "now"|date:"n" == "11" %}selected{% endif %}>November</option>
+                            <option value="12" {% if "now"|date:"n" == "12" %}selected{% endif %}>December</option>
                         </select>
                     </div>
                     <div class="col-md-6">
-                        <select name="year" class="form-select">
-                            <option value="2023" {% if "2023" == "now"|date:"Y" %}selected{% endif %}>2023</option>
-                            <option value="2024" {% if "2024" == "now"|date:"Y" %}selected{% endif %}>2024</option>
-                            <option value="2025" {% if "2025" == "now"|date:"Y" %}selected{% endif %}>2025</option>
-                            <option value="2026" {% if "2026" == "now"|date:"Y" %}selected{% endif %}>2026</option>
+                        <label class="form-label small">Year</label>
+                        <select name="year" class="form-select form-select-sm" required>
+                            <option value="2023" {% if "now"|date:"Y" == "2023" %}selected{% endif %}>2023</option>
+                            <option value="2024" {% if "now"|date:"Y" == "2024" %}selected{% endif %}>2024</option>
+                            <option value="2025" {% if "now"|date:"Y" == "2025" %}selected{% endif %}>2025</option>
+                            <option value="2026" {% if "now"|date:"Y" == "2026" %}selected{% endif %}>2026</option>
                         </select>
                     </div>
                     <div class="col-12">
-                        <button type="submit" class="btn btn-success">
+                        <button type="submit" class="btn btn-success btn-sm">
                             <i class="fas fa-file-excel"></i> Export Monthly XLSX
                         </button>
                     </div>
@@ -226,15 +260,15 @@
                 <h6>📊 Custom Sales Export</h6>
                 <form method="get" action="{% url 'reports:export_sales' 'xlsx' %}" class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label">Start Date</label>
-                        <input type="date" name="start_date" class="form-control" value="{{ "now"|date:"Y-m-01" }}">
+                        <label class="form-label small">Start Date</label>
+                        <input type="date" name="start_date" class="form-control form-control-sm" value="{{ "now"|date:"Y-m-01" }}">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">End Date</label>
-                        <input type="date" name="end_date" class="form-control" value="{{ "now"|date:"Y-m-d" }}">
+                        <label class="form-label small">End Date</label>
+                        <input type="date" name="end_date" class="form-control form-control-sm" value="{{ "now"|date:"Y-m-d" }}">
                     </div>
                     <div class="col-12">
-                        <button type="submit" class="btn btn-info">
+                        <button type="submit" class="btn btn-info btn-sm">
                             <i class="fas fa-file-excel"></i> Export Sales XLSX
                         </button>
                     </div>
@@ -243,4 +277,95 @@
         </div>
     </div>
 </div>
+
+<!-- Factory Reset Modal -->
+<div class="modal fade" id="factoryResetModal" tabindex="-1" aria-labelledby="factoryResetModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="factoryResetModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Factory Reset
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <h6><i class="fas fa-warning me-2"></i>WARNING: This action cannot be undone!</h6>
+                    <p class="mb-0">This will permanently delete ALL data including:</p>
+                    <ul class="mb-0 mt-2">
+                        <li>All invoices and sales records</li>
+                        <li>All products and inventory</li>
+                        <li>All customers</li>
+                        <li>All stock movements</li>
+                        <li>All reports and analytics</li>
+                    </ul>
+                </div>
+                <p class="text-muted">This action will reset the system to its initial state. You will need to set up your shop profile and create products again.</p>
+                
+                <div class="form-group">
+                    <label for="confirmText" class="form-label">Type <strong>RESET</strong> to confirm:</label>
+                    <input type="text" class="form-control" id="confirmText" placeholder="Type RESET here">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmResetBtn" disabled>
+                    <i class="fas fa-trash me-2"></i>Reset Everything
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmText = document.getElementById('confirmText');
+    const confirmBtn = document.getElementById('confirmResetBtn');
+    
+    confirmText.addEventListener('input', function() {
+        if (this.value === 'RESET') {
+            confirmBtn.disabled = false;
+            confirmBtn.classList.remove('btn-danger');
+            confirmBtn.classList.add('btn-danger');
+        } else {
+            confirmBtn.disabled = true;
+        }
+    });
+    
+    confirmBtn.addEventListener('click', function() {
+        if (confirmText.value === 'RESET') {
+            if (confirm('Are you absolutely sure? This will delete ALL data permanently!')) {
+                // Show loading state
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Resetting...';
+                this.disabled = true;
+                
+                // Make the request
+                fetch('{% url "reports:factory_reset" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('System reset successfully! The page will reload.');
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                        this.innerHTML = '<i class="fas fa-trash me-2"></i>Reset Everything';
+                        this.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    alert('Error occurred: ' + error);
+                    this.innerHTML = '<i class="fas fa-trash me-2"></i>Reset Everything';
+                    this.disabled = false;
+                });
+            }
+        }
+    });
+});
+</script>
 {% endblock %}

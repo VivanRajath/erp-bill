@@ -120,13 +120,13 @@ class InvoiceItem(models.Model):
     description = models.CharField(max_length=300, help_text="Product description")
     quantity = models.DecimalField(
         max_digits=10, 
-        decimal_places=3, 
-        validators=[MinValueValidator(Decimal('0.001'))]
+        decimal_places=0, 
+        validators=[MinValueValidator(Decimal('1'))]
     )
     unit_price_incl = models.DecimalField(
         max_digits=10, 
-        decimal_places=2, 
-        validators=[MinValueValidator(Decimal('0.01'))],
+        decimal_places=0, 
+        validators=[MinValueValidator(Decimal('1'))],
         help_text="Unit price including tax"
     )
     tax_rate = models.DecimalField(

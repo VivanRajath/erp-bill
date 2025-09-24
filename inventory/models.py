@@ -22,23 +22,23 @@ class Product(models.Model):
     barcode_value = models.CharField(max_length=100, unique=True, blank=True, null=True)
     price_incl_tax = models.DecimalField(
         max_digits=10, 
-        decimal_places=2, 
-        validators=[MinValueValidator(Decimal('0.01'))],
+        decimal_places=0, 
+        validators=[MinValueValidator(Decimal('1'))],
         help_text="Price including tax"
     )
     tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=5.00, help_text="Tax rate percentage")
     cost_price = models.DecimalField(
         max_digits=10, 
-        decimal_places=2, 
-        validators=[MinValueValidator(Decimal('0.00'))],
-        default=0.00,
+        decimal_places=0, 
+        validators=[MinValueValidator(Decimal('0'))],
+        default=0,
         help_text="Cost price per unit"
     )
     track_stock = models.BooleanField(default=True, help_text="Whether to track stock for this product")
     stock_quantity = models.DecimalField(
         max_digits=10, 
-        decimal_places=3, 
-        default=0.000, 
+        decimal_places=0, 
+        default=0, 
         help_text="Current stock quantity"
     )
     hsn = models.CharField(max_length=20, blank=True, null=True, help_text="HSN/SAC Code")
@@ -132,16 +132,16 @@ class StockMovement(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='stock_movements')
     qty_change = models.DecimalField(
         max_digits=10, 
-        decimal_places=3, 
+        decimal_places=0, 
         help_text="Positive for stock in, negative for stock out"
     )
     reason = models.CharField(max_length=20, choices=MOVEMENT_REASONS, default='adjustment')
     unit_cost = models.DecimalField(
         max_digits=10, 
-        decimal_places=2, 
+        decimal_places=0, 
         blank=True, 
         null=True,
-        validators=[MinValueValidator(Decimal('0.00'))],
+        validators=[MinValueValidator(Decimal('0'))],
         help_text="Unit cost for purchases"
     )
     reference = models.CharField(max_length=100, blank=True, null=True, help_text="Reference like invoice number")

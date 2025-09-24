@@ -1,437 +1,551 @@
-{% extends 'base.html' %}
-
-{% block title %}Point of Sale - {{ shop_profile.shop_name }}{% endblock %}
-
-{% block extra_css %}
+{% extends 'base.html' %} {% block title %}Point of Sale - {{
+shop_profile.shop_name }}{% endblock %} {% block extra_css %}
 <style>
-    .barcode-input {
-        font-size: 1.2rem;
-        border: 2px solid var(--primary-color);
-    }
-    
-    .cart-item {
-        border-left: 4px solid var(--primary-color);
-        background: white;
-        margin-bottom: 10px;
-        border-radius: 8px;
-        transition: transform 0.2s;
-    }
-    
-    .cart-item:hover {
-        transform: translateX(5px);
-    }
-    
-    .cart-total {
-        background: linear-gradient(135deg, var(--primary-color), #0056b3);
-        color: white;
-        border-radius: 10px;
-    }
-    
-    .product-card {
-        transition: transform 0.2s, box-shadow 0.2s;
-        cursor: pointer;
-    }
-    
-    .product-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(0,0,0,.15);
-    }
-    
-    .gst-breakdown {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 15px;
-        border-left: 4px solid var(--success-color);
-    }
+  .barcode-input {
+    font-size: 1.2rem;
+    border: 2px solid var(--primary-color);
+  }
+
+  .cart-item {
+    border-left: 4px solid var(--primary-color);
+    background: white;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    transition: transform 0.2s;
+  }
+
+  .cart-item:hover {
+    transform: translateX(5px);
+  }
+
+  .cart-total {
+    background: linear-gradient(135deg, var(--primary-color), #0056b3);
+    color: white;
+    border-radius: 10px;
+  }
+
+  .product-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+  }
+
+  .product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  }
+
+  .gst-breakdown {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    border-left: 4px solid var(--success-color);
+  }
+  .btn-outline-primary {
+    border-color: var(--primary-color);
+  }
+
+  /* Hover state */
+  .btn-outline-primary:hover {
+    background-color: #F8F9FA;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+  }
 </style>
-{% endblock %}
-
-{% block content %}
+{% endblock %} {% block content %}
 <div class="row">
-    <!-- Left Column - Product Scanner & Search -->
-    <div class="col-lg-8">
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h5 class="card-title mb-0">🔍 Product Scanner & Search</h5>
+  <!-- Left Column - Product Scanner & Search -->
+  <div class="col-lg-8">
+    <div class="card mb-4">
+      <div class="card-header bg-primary text-white">
+        <h5 class="card-title mb-0">🔍 Product Scanner & Search</h5>
+      </div>
+      <div class="card-body">
+        <!-- Barcode Scanner Input -->
+        <div class="row mb-4">
+          <div class="col-md-8">
+            <label for="barcodeInput" class="form-label"
+              >Scan Barcode or Search Product</label
+            >
+            <input
+              type="text"
+              id="barcodeInput"
+              class="form-control barcode-input"
+              placeholder="Scan barcode or type product name/SKU..."
+              autocomplete="off"
+            />
+            <div class="form-text">
+              📱 Use barcode scanner gun or type manually. Press Enter to add to
+              cart.
             </div>
-            <div class="card-body">
-                <!-- Barcode Scanner Input -->
-                <div class="row mb-4">
-                    <div class="col-md-8">
-                        <label for="barcodeInput" class="form-label">Scan Barcode or Search Product</label>
-                        <input type="text" id="barcodeInput" class="form-control barcode-input" 
-                               placeholder="Scan barcode or type product name/SKU..." 
-                               autocomplete="off">
-                        <div class="form-text">
-                            📱 Use barcode scanner gun or type manually. Press Enter to add to cart.
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Quick Add</label>
-                        <button type="button" class="btn btn-outline-primary w-100" onclick="openManualAdd()">
-                            ➕ Add Manual Item
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Product Search Results -->
-                <div id="searchResults" class="d-none">
-                    <h6>Search Results:</h6>
-                    <div id="productList" class="row"></div>
-                </div>
-            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Quick Add</label>
+            <button
+              type="button"
+              class="btn btn-outline-primary w-100"
+              onclick="openManualAdd()"
+            >
+              ➕ Add Manual Item
+            </button>
+          </div>
         </div>
 
-        <!-- Barcode Lookup (Info only) -->
-        <div class="card mb-4" id="lookupSection">
-            <div class="card-header">
-                <h6 class="card-title mb-0">🔎 Check Item by Barcode (Info only)</h6>
-            </div>
-            <div class="card-body">
-                <div class="row g-2 align-items-end">
-                    <div class="col-md-6">
-                        <label class="form-label">Enter/Scan Barcode</label>
-                        <input type="text" id="lookupBarcode" class="form-control" placeholder="Scan barcode to get item info">
-                    </div>
-                    <div class="col-md-3">
-                        <button class="btn btn-outline-primary w-100" onclick="lookupItem()">Check</button>
-                    </div>
-                </div>
-                <div id="lookupResult" class="mt-3 text-muted"></div>
-            </div>
+        <!-- Product Search Results -->
+        <div id="searchResults" class="d-none">
+          <h6>Search Results:</h6>
+          <div id="productList" class="row"></div>
         </div>
-        
-        <!-- Recent Products (Quick Add) -->
-        <div class="card">
-            <div class="card-header">
-                <h6 class="card-title mb-0">🔥 Quick Add Products</h6>
-            </div>
-            <div class="card-body">
-                <div id="recentProducts" class="row">
-                    <div class="col-md-12 text-center text-muted py-3">
-                        Products will appear here as you use them
-                    </div>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
-    
-    <!-- Right Column - Shopping Cart -->
-    <div class="col-lg-4">
-        <div class="card sticky-top">
-            <div class="card-header bg-success text-white">
-                <h5 class="card-title mb-0">🛒 Shopping Cart</h5>
-            </div>
-            <div class="card-body">
-                <!-- Customer Name -->
-                <div class="mb-3">
-                    <label for="customerName" class="form-label">Customer Name (Optional)</label>
-                    <input type="text" id="customerName" class="form-control" 
-                           placeholder="Walk-in customer">
-                </div>
-                
-                <!-- Cart Items -->
-                <div id="cartItems" class="mb-3" style="max-height: 400px; overflow-y: auto;">
-                    <div class="text-center text-muted py-4">
-                        Cart is empty<br>
-                        <small>Scan products to add them</small>
-                    </div>
-                </div>
-                
-                <!-- GST Breakdown -->
-                <div class="gst-breakdown mb-3">
-                    <div class="row">
-                        <div class="col-6">
-                            <small class="text-muted">Subtotal (Base):</small><br>
-                            <span id="subtotalBase">₹0.00</span>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted">GST (5%):</small><br>
-                            <span id="gstAmount">₹0.00</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Cart Total -->
-                <div class="cart-total p-3 mb-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Total:</h5>
-                        <h4 class="mb-0" id="cartTotal">₹0.00</h4>
-                    </div>
-                    <div class="text-center mt-2">
-                        <small id="itemCount">0 items</small>
-                    </div>
-                </div>
-                
-                <!-- Action Buttons -->
-                <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-success btn-lg" id="checkoutBtn" 
-                            onclick="checkout()" disabled>
-                        💳 Checkout & Print Invoice
-                    </button>
-                    <button type="button" class="btn btn-outline-danger" onclick="clearCart()">
-                        🗑️ Clear Cart
-                    </button>
-                </div>
-            </div>
+
+    <!-- Barcode Lookup (Info only) -->
+    <div class="card mb-4" id="lookupSection">
+      <div class="card-header">
+        <h6 class="card-title mb-0">🔎 Check Item by Barcode (Info only)</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-6">
+            <label class="form-label">Enter/Scan Barcode</label>
+            <input
+              type="text"
+              id="lookupBarcode"
+              class="form-control"
+              placeholder="Scan barcode to get item info"
+            />
+          </div>
+          <div class="col-md-3">
+            <button
+              class="btn btn-outline-primary w-100"
+              onclick="lookupItem()"
+            >
+              Check
+            </button>
+          </div>
         </div>
+        <div id="lookupResult" class="mt-3 text-muted"></div>
+      </div>
     </div>
+
+    <!-- Recent Products (Quick Add) -->
+    <div class="card">
+      <div class="card-header">
+        <h6 class="card-title mb-0">🔥 Quick Add Products</h6>
+      </div>
+      <div class="card-body">
+        <div id="recentProducts" class="row">
+          <div class="col-md-12 text-center text-muted py-3">
+            Products will appear here as you use them
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column - Shopping Cart -->
+  <div class="col-lg-4">
+    <div class="card sticky-top">
+      <div class="card-header bg-success text-white">
+        <h5 class="card-title mb-0">🛒 Shopping Cart</h5>
+      </div>
+      <div class="card-body">
+        <!-- Customer Name -->
+        <div class="mb-3">
+          <label for="customerName" class="form-label"
+            >Customer Name (Optional)</label
+          >
+          <input
+            type="text"
+            id="customerName"
+            class="form-control"
+            placeholder="Walk-in customer"
+          />
+        </div>
+
+        <!-- Cart Items -->
+        <div
+          id="cartItems"
+          class="mb-3"
+          style="max-height: 400px; overflow-y: auto"
+        >
+          <div class="text-center text-muted py-4">
+            Cart is empty<br />
+            <small>Scan products to add them</small>
+          </div>
+        </div>
+
+        <!-- GST Breakdown -->
+        <div class="gst-breakdown mb-3">
+          <div class="row">
+            <div class="col-6">
+              <small class="text-muted">Subtotal (Base):</small><br />
+              <span id="subtotalBase">₹0.00</span>
+            </div>
+            <div class="col-6">
+              <small class="text-muted">GST (5%):</small><br />
+              <span id="gstAmount">₹0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cart Total -->
+        <div class="cart-total p-3 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Total:</h5>
+            <h4 class="mb-0" id="cartTotal">₹0.00</h4>
+          </div>
+          <div class="text-center mt-2">
+            <small id="itemCount">0 items</small>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-grid gap-2">
+          <button
+            type="button"
+            class="btn btn-success btn-lg"
+            id="checkoutBtn"
+            onclick="checkout()"
+            disabled
+          >
+            💳 Checkout & Print Invoice
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-danger"
+            onclick="clearCart()"
+          >
+            🗑️ Clear Cart
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Manual Add Modal -->
 <div class="modal fade" id="manualAddModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add Manual Item</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Manual Item</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form id="manualAddForm">
+          <div class="mb-3">
+            <label class="form-label">Item Name</label>
+            <input
+              type="text"
+              class="form-control"
+              id="manualDescription"
+              placeholder="e.g. Service charge, Custom item"
+              required
+            />
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <label class="form-label">Quantity</label>
+              <input
+                type="number"
+                class="form-control"
+                id="manualQuantity"
+                value="1"
+                min="1"
+                step="1"
+                required
+              />
             </div>
-            <div class="modal-body">
-                <form id="manualAddForm">
-                    <div class="mb-3">
-                        <label class="form-label">Item Description</label>
-                        <input type="text" class="form-control" id="manualDescription" required>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label class="form-label">Quantity</label>
-                            <input type="number" class="form-control" id="manualQuantity" value="1" min="0.001" step="0.001" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Price (incl. GST)</label>
-                            <input type="number" class="form-control" id="manualPrice" min="0.01" step="0.01" required>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <label class="form-label">GST Rate (%)</label>
-                            <input type="number" class="form-control" id="manualGstRate" value="5" min="0" max="28" step="0.01">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Unit</label>
-                            <input type="text" class="form-control" id="manualUnit" value="pcs">
-                        </div>
-                    </div>
-                </form>
+            <div class="col-md-6">
+              <label class="form-label">Price</label>
+              <input
+                type="number"
+                class="form-control"
+                id="manualPrice"
+                min="1"
+                step="1"
+                required
+              />
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="addManualItem()">Add to Cart</button>
-            </div>
-        </div>
+          </div>
+          <div class="form-check mt-3">
+            <input class="form-check-input" type="checkbox" id="createProduct">
+            <label class="form-check-label" for="createProduct">
+              Create as new product in inventory (categorized as "Others")
+            </label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" onclick="addManualItem()">
+          Add to Cart
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 
 <!-- Edit Item Modal -->
 <div class="modal fade" id="editItemModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Item</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-2"><strong id="editDescription"></strong></div>
-                <div class="row g-2">
-                    <div class="col-md-6">
-                        <label class="form-label">Price (incl. GST)</label>
-                        <input type="number" class="form-control" id="editPrice" min="0.01" step="0.01">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">GST Rate (%)</label>
-                        <input type="number" class="form-control" id="editTax" min="0" max="28" step="0.01">
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveEditItem()">Save</button>
-            </div>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Item</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2"><strong id="editDescription"></strong></div>
+        <div class="row g-2">
+          <div class="col-md-6">
+            <label class="form-label">Price (incl. GST)</label>
+            <input
+              type="number"
+              class="form-control"
+              id="editPrice"
+              min="1"
+              step="1"
+            />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">GST Rate (%)</label>
+            <input
+              type="number"
+              class="form-control"
+              id="editTax"
+              min="0"
+              max="28"
+              step="0.01"
+            />
+          </div>
         </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-primary" onclick="saveEditItem()">
+          Save
+        </button>
+      </div>
     </div>
+  </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
+{% endblock %} {% block extra_js %}
 <script>
-let cart = [];
-let currentSearch = '';
+  let cart = [];
+  let currentSearch = "";
 
-// Initialize POS interface
-document.addEventListener('DOMContentLoaded', function() {
-    const barcodeInput = document.getElementById('barcodeInput');
-    
+  // Initialize POS interface
+  document.addEventListener("DOMContentLoaded", function () {
+    const barcodeInput = document.getElementById("barcodeInput");
+
     // Focus barcode input
     barcodeInput.focus();
-    
+
     // Handle barcode input
-    barcodeInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            searchProduct(this.value.trim());
-        }
+    barcodeInput.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        searchProduct(this.value.trim());
+      }
     });
-    
+
     // Handle input changes for live search
-    barcodeInput.addEventListener('input', function(e) {
-        const query = this.value.trim();
-        if (query.length > 2) {
-            searchProduct(query);
-        } else {
-            hideSearchResults();
-        }
+    barcodeInput.addEventListener("input", function (e) {
+      const query = this.value.trim();
+      if (query.length > 2) {
+        searchProduct(query);
+      } else {
+        hideSearchResults();
+      }
     });
-    
+
     // Keep focus on barcode input
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.modal') && !e.target.closest('#searchResults') && !e.target.closest('#lookupSection')) {
-            setTimeout(() => barcodeInput.focus(), 100);
-        }
+    document.addEventListener("click", function (e) {
+      if (
+        !e.target.closest(".modal") &&
+        !e.target.closest("#searchResults") &&
+        !e.target.closest("#lookupSection")
+      ) {
+        setTimeout(() => barcodeInput.focus(), 100);
+      }
     });
-});
+  });
 
-// Search for products
-function searchProduct(query) {
+  // Search for products
+  function searchProduct(query) {
     if (!query) return;
-    
-    currentSearch = query;
-    
-    fetch(`/api/product-lookup/?q=${encodeURIComponent(query)}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                showError(data.error);
-                hideSearchResults();
-            } else if (data.multiple) {
-                showSearchResults(data.products);
-            } else {
-                // Single product found, add to cart
-                addToCart(data);
-                document.getElementById('barcodeInput').value = '';
-                hideSearchResults();
-            }
-        })
-        .catch(error => {
-            console.error('Search error:', error);
-            showError('Search failed. Please try again.');
-        });
-}
 
-// Show search results
-function showSearchResults(products) {
-    const resultsDiv = document.getElementById('searchResults');
-    const productList = document.getElementById('productList');
-    
-    productList.innerHTML = '';
-    
-    products.forEach(product => {
-        const productCard = document.createElement('div');
-        productCard.className = 'col-md-6 mb-2';
-        productCard.innerHTML = `
-            <div class="card product-card" onclick="selectProduct(${JSON.stringify(product).replace(/"/g, '&quot;')})">
+    currentSearch = query;
+
+    fetch(`/api/product-lookup/?q=${encodeURIComponent(query)}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.error) {
+          showError(data.error);
+          hideSearchResults();
+        } else if (data.multiple) {
+          showSearchResults(data.products);
+        } else {
+          // Single product found, add to cart
+          addToCart(data);
+          document.getElementById("barcodeInput").value = "";
+          hideSearchResults();
+        }
+      })
+      .catch((error) => {
+        console.error("Search error:", error);
+        showError("Search failed. Please try again.");
+      });
+  }
+
+  // Show search results
+  function showSearchResults(products) {
+    const resultsDiv = document.getElementById("searchResults");
+    const productList = document.getElementById("productList");
+
+    productList.innerHTML = "";
+
+    products.forEach((product) => {
+      const productCard = document.createElement("div");
+      productCard.className = "col-md-6 mb-2";
+      productCard.innerHTML = `
+            <div class="card product-card" onclick="selectProduct(${JSON.stringify(
+              product
+            ).replace(/"/g, "&quot;")})">
                 <div class="card-body p-2">
                     <h6 class="card-title mb-1">${product.name}</h6>
                     <small class="text-muted">${product.sku}</small>
                     <div class="d-flex justify-content-between align-items-center mt-1">
-                        <span class="fw-bold text-success">₹${product.price}</span>
-                        <small class="text-muted">${product.stock !== null ? `Stock: ${product.stock}` : 'No tracking'}</small>
+                        <span class="fw-bold text-success">₹${
+                          product.price
+                        }</span>
+                        <small class="text-muted">${
+                          product.stock !== null
+                            ? `Stock: ${product.stock}`
+                            : "No tracking"
+                        }</small>
                     </div>
                 </div>
             </div>
         `;
-        productList.appendChild(productCard);
+      productList.appendChild(productCard);
     });
-    
-    resultsDiv.classList.remove('d-none');
-}
 
-function lookupItem() {
-    const code = document.getElementById('lookupBarcode').value.trim();
+    resultsDiv.classList.remove("d-none");
+  }
+
+  function lookupItem() {
+    const code = document.getElementById("lookupBarcode").value.trim();
     if (!code) return;
     fetch(`/api/product-lookup/?q=${encodeURIComponent(code)}`)
-      .then(r => r.json())
-      .then(data => {
-        const box = document.getElementById('lookupResult');
-        if (data.error) { box.innerHTML = `<span class="text-danger">${data.error}</span>`; return; }
+      .then((r) => r.json())
+      .then((data) => {
+        const box = document.getElementById("lookupResult");
+        if (data.error) {
+          box.innerHTML = `<span class="text-danger">${data.error}</span>`;
+          return;
+        }
         if (data.multiple && data.products && data.products.length) {
-            const p = data.products[0];
-            box.innerHTML = `<div><strong>${p.name}</strong> — SKU: ${p.sku} — ₹${p.price} ${p.stock !== null ? `(Stock: ${p.stock})` : ''}</div>`;
+          const p = data.products[0];
+          box.innerHTML = `<div><strong>${p.name}</strong> — SKU: ${p.sku} — ₹${
+            p.price
+          } ${p.stock !== null ? `(Stock: ${p.stock})` : ""}</div>`;
         } else {
-            box.innerHTML = `<div><strong>${data.name}</strong> — SKU: ${data.sku} — ₹${data.price} ${data.stock !== null ? `(Stock: ${data.stock})` : ''}</div>`;
+          box.innerHTML = `<div><strong>${data.name}</strong> — SKU: ${
+            data.sku
+          } — ₹${data.price} ${
+            data.stock !== null ? `(Stock: ${data.stock})` : ""
+          }</div>`;
         }
       })
-      .catch(() => { document.getElementById('lookupResult').textContent = 'Lookup failed'; });
-}
+      .catch(() => {
+        document.getElementById("lookupResult").textContent = "Lookup failed";
+      });
+  }
 
-// Hide search results
-function hideSearchResults() {
-    document.getElementById('searchResults').classList.add('d-none');
-}
+  // Hide search results
+  function hideSearchResults() {
+    document.getElementById("searchResults").classList.add("d-none");
+  }
 
-// Select product from search results
-function selectProduct(product) {
+  // Select product from search results
+  function selectProduct(product) {
     addToCart(product);
-    document.getElementById('barcodeInput').value = '';
+    document.getElementById("barcodeInput").value = "";
     hideSearchResults();
-}
+  }
 
-// Add product to cart
-function addToCart(product, quantity = 1) {
+  // Add product to cart
+  function addToCart(product, quantity = 1) {
     // Check if product already in cart
-    const existingIndex = cart.findIndex(item => item.id === product.id);
-    
-    if (existingIndex >= 0) {
-        // Update quantity
-        cart[existingIndex].quantity += quantity;
-    } else {
-        // Add new item
-        cart.push({
-            id: product.id || null,
-            name: product.name,
-            description: product.name,
-            quantity: quantity,
-            unit_price: product.price,
-            tax_rate: product.tax_rate || 5,
-            unit: product.unit || 'pcs'
-        });
-    }
-    
-    updateCartDisplay();
-    document.getElementById('barcodeInput').focus();
-}
+    const existingIndex = cart.findIndex((item) => item.id === product.id);
 
-// Update cart display
-function updateCartDisplay() {
-    const cartItems = document.getElementById('cartItems');
-    const checkoutBtn = document.getElementById('checkoutBtn');
-    
+    if (existingIndex >= 0) {
+      // Update quantity
+      cart[existingIndex].quantity += quantity;
+    } else {
+      // Add new item
+      cart.push({
+        id: product.id || null,
+        name: product.name,
+        description: product.name,
+        quantity: quantity,
+        unit_price: product.unit_price || product.price,
+        tax_rate: product.tax_rate || 0,
+        unit: product.unit || "pcs",
+      });
+    }
+
+    updateCartDisplay();
+    document.getElementById("barcodeInput").focus();
+  }
+
+  // Update cart display
+  function updateCartDisplay() {
+    const cartItems = document.getElementById("cartItems");
+    const checkoutBtn = document.getElementById("checkoutBtn");
+
     if (cart.length === 0) {
-        cartItems.innerHTML = `
+      cartItems.innerHTML = `
             <div class="text-center text-muted py-4">
                 Cart is empty<br>
                 <small>Scan products to add them</small>
             </div>
         `;
-        checkoutBtn.disabled = true;
+      checkoutBtn.disabled = true;
     } else {
-        cartItems.innerHTML = '';
-        cart.forEach((item, index) => {
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'cart-item p-2 mb-2';
-            
-            const basePrice = item.unit_price / (1 + item.tax_rate / 100);
-            const taxAmount = item.unit_price - basePrice;
-            const totalPrice = item.unit_price * item.quantity;
-            
-            itemDiv.innerHTML = `
+      cartItems.innerHTML = "";
+      cart.forEach((item, index) => {
+        const itemDiv = document.createElement("div");
+        itemDiv.className = "cart-item p-2 mb-2";
+
+        const basePrice = item.unit_price / (1 + item.tax_rate / 100);
+        const taxAmount = item.unit_price - basePrice;
+        const totalPrice = item.unit_price * item.quantity;
+
+        itemDiv.innerHTML = `
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
                         <h6 class="mb-1">${item.description}</h6>
-                        <small class="text-muted d-block">Price × Qty: ₹${item.unit_price.toFixed(2)} × ${item.quantity} ${item.unit} (GST ${item.tax_rate}%)</small>
+                        <small class="text-muted d-block">Price × Qty: ₹${item.unit_price} × ${item.quantity} ${item.unit} (GST ${
+          item.tax_rate
+        }%)</small>
                         <button class="btn btn-sm btn-outline-primary mt-1" onclick="openEditItem(${index})">Edit price/tax</button>
                     </div>
                     <div class="text-end">
-                        <span class="fw-bold">₹${totalPrice.toFixed(2)}</span>
+                        <span class="fw-bold">₹${totalPrice}</span>
                         <br>
                         <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(${index})">×</button>
                     </div>
@@ -443,231 +557,305 @@ function updateCartDisplay() {
                         <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(${index}, 1)">+</button>
                     </div>
                     <div class="col-6 text-end">
-                        <small class="text-muted">Base: ₹${(basePrice * item.quantity).toFixed(2)}</small><br>
-                        <small class="text-muted">GST: ₹${(taxAmount * item.quantity).toFixed(2)}</small>
+                        <small class="text-muted">Base: ₹${Math.round(basePrice * item.quantity)}</small><br>
+                        <small class="text-muted">GST: ₹${Math.round(taxAmount * item.quantity)}</small>
                     </div>
                 </div>
             `;
-            cartItems.appendChild(itemDiv);
-        });
-        checkoutBtn.disabled = false;
+        cartItems.appendChild(itemDiv);
+      });
+      checkoutBtn.disabled = false;
     }
-    
+
     updateCartTotals();
-}
+  }
 
-let editIndex = null;
-function openEditItem(index) {
+  let editIndex = null;
+  function openEditItem(index) {
     editIndex = index;
-    document.getElementById('editDescription').textContent = cart[index].description;
-    document.getElementById('editPrice').value = cart[index].unit_price.toFixed(2);
-    document.getElementById('editTax').value = cart[index].tax_rate;
-    const modal = new bootstrap.Modal(document.getElementById('editItemModal'));
+    document.getElementById("editDescription").textContent =
+      cart[index].description;
+    document.getElementById("editPrice").value =
+      cart[index].unit_price;
+    document.getElementById("editTax").value = cart[index].tax_rate;
+    const modal = new bootstrap.Modal(document.getElementById("editItemModal"));
     modal.show();
-}
+  }
 
-function saveEditItem() {
+  function saveEditItem() {
     if (editIndex === null) return;
-    const price = parseFloat(document.getElementById('editPrice').value);
-    const tax = parseFloat(document.getElementById('editTax').value);
-    if (!isNaN(price) && price >= 0.01) {
-        cart[editIndex].unit_price = price;
+    const price = parseInt(document.getElementById("editPrice").value);
+    const tax = parseFloat(document.getElementById("editTax").value);
+    if (!isNaN(price) && price >= 1) {
+      cart[editIndex].unit_price = price;
     }
     if (!isNaN(tax) && tax >= 0) {
-        cart[editIndex].tax_rate = tax;
+      cart[editIndex].tax_rate = tax;
     }
     updateCartDisplay();
-    bootstrap.Modal.getInstance(document.getElementById('editItemModal')).hide();
-}
+    bootstrap.Modal.getInstance(
+      document.getElementById("editItemModal")
+    ).hide();
+  }
 
-// Update cart totals
-function updateCartTotals() {
+  // Update cart totals
+  function updateCartTotals() {
     let totalBase = 0;
     let totalGst = 0;
     let totalIncl = 0;
     let itemCount = 0;
-    
-    cart.forEach(item => {
-        const basePrice = item.unit_price / (1 + item.tax_rate / 100);
-        const taxAmount = item.unit_price - basePrice;
-        
-        totalBase += basePrice * item.quantity;
-        totalGst += taxAmount * item.quantity;
-        totalIncl += item.unit_price * item.quantity;
-        itemCount += item.quantity;
-    });
-    
-    document.getElementById('subtotalBase').textContent = `₹${totalBase.toFixed(2)}`;
-    document.getElementById('gstAmount').textContent = `₹${totalGst.toFixed(2)}`;
-    document.getElementById('cartTotal').textContent = `₹${totalIncl.toFixed(2)}`;
-    document.getElementById('itemCount').textContent = `${itemCount} item${itemCount !== 1 ? 's' : ''}`;
-}
 
-// Remove item from cart
-function removeFromCart(index) {
+    cart.forEach((item) => {
+      const basePrice = item.unit_price / (1 + item.tax_rate / 100);
+      const taxAmount = item.unit_price - basePrice;
+
+      totalBase += basePrice * item.quantity;
+      totalGst += taxAmount * item.quantity;
+      totalIncl += item.unit_price * item.quantity;
+      itemCount += item.quantity;
+    });
+
+    document.getElementById("subtotalBase").textContent = `₹${Math.round(totalBase)}`;
+    document.getElementById("gstAmount").textContent = `₹${Math.round(totalGst)}`;
+    document.getElementById("cartTotal").textContent = `₹${Math.round(totalIncl)}`;
+    document.getElementById("itemCount").textContent = `${itemCount} item${
+      itemCount !== 1 ? "s" : ""
+    }`;
+  }
+
+  // Remove item from cart
+  function removeFromCart(index) {
     cart.splice(index, 1);
     updateCartDisplay();
-}
+  }
 
-// Update item quantity
-function updateQuantity(index, change) {
+  // Update item quantity
+  function updateQuantity(index, change) {
     cart[index].quantity += change;
     if (cart[index].quantity <= 0) {
-        removeFromCart(index);
+      removeFromCart(index);
     } else {
-        updateCartDisplay();
+      updateCartDisplay();
     }
-}
+  }
 
-// Clear cart
-function clearCart() {
-    if (cart.length > 0 && confirm('Are you sure you want to clear the cart?')) {
-        cart = [];
-        updateCartDisplay();
-        document.getElementById('customerName').value = '';
+  // Clear cart
+  function clearCart() {
+    if (
+      cart.length > 0 &&
+      confirm("Are you sure you want to clear the cart?")
+    ) {
+      cart = [];
+      updateCartDisplay();
+      document.getElementById("customerName").value = "";
     }
-}
+  }
 
-// Open manual add modal
-function openManualAdd() {
-    const modal = new bootstrap.Modal(document.getElementById('manualAddModal'));
+  // Open manual add modal
+  function openManualAdd() {
+    const modal = new bootstrap.Modal(
+      document.getElementById("manualAddModal")
+    );
     modal.show();
-    setTimeout(() => document.getElementById('manualDescription').focus(), 300);
-}
+    setTimeout(() => document.getElementById("manualDescription").focus(), 300);
+  }
 
-// Add manual item
-function addManualItem() {
-    const description = document.getElementById('manualDescription').value.trim();
-    const quantity = parseFloat(document.getElementById('manualQuantity').value);
-    const price = parseFloat(document.getElementById('manualPrice').value);
-    const gstRate = parseFloat(document.getElementById('manualGstRate').value);
-    const unit = document.getElementById('manualUnit').value.trim();
-    
+  // Add manual item
+  function addManualItem() {
+    const description = document
+      .getElementById("manualDescription")
+      .value.trim();
+    const quantity = parseInt(
+      document.getElementById("manualQuantity").value
+    );
+    const price = parseInt(document.getElementById("manualPrice").value);
+    const createProduct = document.getElementById("createProduct").checked;
+
     if (!description || !quantity || !price) {
-        showError('Please fill all required fields');
-        return;
+      showError("Enter name, price and quantity");
+      return;
     }
-    
-    const manualItem = {
+
+    if (createProduct) {
+      // Create new product first
+      createNewProduct(description, price, quantity);
+    } else {
+      // Add as manual item only
+      const manualItem = {
         id: null,
         name: description,
         description: description,
         quantity: quantity,
         unit_price: price,
-        tax_rate: gstRate,
-        unit: unit
-    };
-    
-    addToCart(manualItem, 0); // Quantity already set
-    
-    // Close modal and reset form
-    bootstrap.Modal.getInstance(document.getElementById('manualAddModal')).hide();
-    document.getElementById('manualAddForm').reset();
-    document.getElementById('manualQuantity').value = '1';
-    document.getElementById('manualGstRate').value = '5';
-    document.getElementById('manualUnit').value = 'pcs';
-}
+        tax_rate: 0,
+        unit: "pcs",
+      };
 
-// Checkout process
-function checkout() {
-    if (cart.length === 0) {
-        showError('Cart is empty');
-        return;
+      addToCart(manualItem);
+      closeManualModal();
     }
-    
-    const customerName = document.getElementById('customerName').value.trim();
-    
-    const checkoutData = {
-        items: cart.map(item => ({
-            product_id: item.id,
-            description: item.description,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            tax_rate: item.tax_rate
-        })),
-        customer_name: customerName
-    };
-    
-    fetch('/api/checkout/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify(checkoutData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showSuccess(`Invoice ${data.invoice_number} created successfully!`);
-            
-            // Clear cart
-            cart = [];
-            updateCartDisplay();
-            document.getElementById('customerName').value = '';
-            
-            // Offer to print invoice
-            if (confirm('Invoice created! Would you like to print it now?')) {
-                window.open(`/invoice/${data.invoice_id}/print/`, '_blank');
-            }
-        } else {
-            showError(data.error || 'Checkout failed');
-        }
-    })
-    .catch(error => {
-        console.error('Checkout error:', error);
-        showError('Checkout failed. Please try again.');
-    });
-}
+  }
 
-// Utility functions
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
+  // Create new product and add to cart
+  function createNewProduct(name, price, quantity) {
+    const productData = {
+      name: name,
+      price_incl_tax: price,
+      cost_price: price,
+      stock_quantity: 0,
+      tax_rate: 0,
+      track_stock: false,
+      collection: "Others"
+    };
+
+    fetch("/api/create-product/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie("csrftoken"),
+      },
+      body: JSON.stringify(productData),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          // Add to cart
+          const product = {
+            id: data.product_id,
+            name: name,
+            description: name,
+            quantity: quantity,
+            unit_price: price,
+            tax_rate: 0,
+            unit: "pcs",
+          };
+          addToCart(product);
+          closeManualModal();
+          showSuccess(`Product "${name}" created and added to cart!`);
+        } else {
+          showError(data.error || "Failed to create product");
         }
+      })
+      .catch((error) => {
+        console.error("Create product error:", error);
+        showError("Failed to create product. Please try again.");
+      });
+  }
+
+  // Close manual modal and reset form
+  function closeManualModal() {
+    bootstrap.Modal.getInstance(
+      document.getElementById("manualAddModal")
+    ).hide();
+    document.getElementById("manualAddForm").reset();
+    document.getElementById("manualQuantity").value = "1";
+    document.getElementById("createProduct").checked = false;
+  }
+
+  // Checkout process
+  function checkout() {
+    if (cart.length === 0) {
+      showError("Cart is empty");
+      return;
+    }
+
+    const customerName = document.getElementById("customerName").value.trim();
+
+    const checkoutData = {
+      items: cart.map((item) => ({
+        product_id: item.id,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        tax_rate: item.tax_rate,
+      })),
+      customer_name: customerName,
+    };
+
+    fetch("/api/checkout/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie("csrftoken"),
+      },
+      body: JSON.stringify(checkoutData),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          showSuccess(`Invoice ${data.invoice_number} created successfully!`);
+
+          // Clear cart
+          cart = [];
+          updateCartDisplay();
+          document.getElementById("customerName").value = "";
+
+          // Offer to print invoice
+          if (confirm("Invoice created! Would you like to print it now?")) {
+            window.open(`/invoice/${data.invoice_id}/print/`, "_blank");
+          }
+        } else {
+          showError(data.error || "Checkout failed");
+        }
+      })
+      .catch((error) => {
+        console.error("Checkout error:", error);
+        showError("Checkout failed. Please try again.");
+      });
+  }
+
+  // Utility functions
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === name + "=") {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
     }
     return cookieValue;
-}
+  }
 
-function showError(message) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-danger alert-dismissible fade show position-fixed';
-    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+  function showError(message) {
+    const alertDiv = document.createElement("div");
+    alertDiv.className =
+      "alert alert-danger alert-dismissible fade show position-fixed";
+    alertDiv.style.cssText =
+      "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
     alertDiv.innerHTML = `
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     document.body.appendChild(alertDiv);
-    
-    setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.remove();
-        }
-    }, 5000);
-}
 
-function showSuccess(message) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
-    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        alertDiv.remove();
+      }
+    }, 5000);
+  }
+
+  function showSuccess(message) {
+    const alertDiv = document.createElement("div");
+    alertDiv.className =
+      "alert alert-success alert-dismissible fade show position-fixed";
+    alertDiv.style.cssText =
+      "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
     alertDiv.innerHTML = `
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     document.body.appendChild(alertDiv);
-    
+
     setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.remove();
-        }
+      if (alertDiv.parentNode) {
+        alertDiv.remove();
+      }
     }, 5000);
-}
+  }
 </script>
 {% endblock %}

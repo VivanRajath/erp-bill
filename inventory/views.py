@@ -46,10 +46,22 @@ def inventory_dashboard(request):
     low_stock_products = Product.objects.filter(track_stock=True, stock_quantity__lt=5).count()
     recent_movements = StockMovement.objects.select_related('product').order_by('-timestamp')[:10]
     
+    # Calculate total investment
+    total_investment = 0
+    for product in Product.objects.filter(track_stock=True):
+        total_investment += product.stock_quantity * product.cost_price
+    
+    # Recent purchases
+    recent_purchases = StockMovement.objects.filter(
+        reason='purchase'
+    ).select_related('product').order_by('-timestamp')[:5]
+    
     context = {
         'total_products': total_products,
         'low_stock_products': low_stock_products,
         'recent_movements': recent_movements,
+        'total_investment': total_investment,
+        'recent_purchases': recent_purchases,
         'page_title': 'Inventory Dashboard'
     }
     return render(request, 'inventory/dashboard.html', context)
@@ -113,7 +125,18 @@ def product_add(request):
                     track_stock=True,
                     stock_quantity=Decimal(stock_quantity)
                 )
-                messages.success(request, 'Product created')
+                
+                # Create stock movement for initial stock if quantity > 0
+                if Decimal(stock_quantity) > 0:
+                    StockMovement.objects.create(
+                        product=product,
+                        qty_change=Decimal(stock_quantity),
+                        reason='purchase',
+                        unit_cost=Decimal(cost_price or '0'),
+                        reference='Initial Stock'
+                    )
+                
+                messages.success(request, f'Product created with {stock_quantity} units. Investment: ₹{Decimal(stock_quantity) * Decimal(cost_price or "0"):.2f}')
                 return redirect('inventory:product_list')
             except Exception as e:
                 messages.error(request, f'Error creating product: {e}')
@@ -213,6 +236,48 @@ def stock_purchase(request):
     """Record stock purchase"""
     if not request.session.get('inventory_authenticated'):
         return redirect('inventory:inventory_login')
+    
+    if request.method == 'POST':
+        product_id = request.POST.get('product_id')
+        qty = request.POST.get('qty')
+        unit_cost = request.POST.get('unit_cost')
+        reference = request.POST.get('reference', '').strip()
+        
+        if not product_id or not qty or not unit_cost:
+            messages.error(request, 'Please fill all required fields')
+        else:
+            try:
+                product = Product.objects.get(id=product_id)
+                qty_decimal = Decimal(qty)
+                unit_cost_decimal = Decimal(unit_cost)
+                
+                if qty_decimal <= 0:
+                    messages.error(request, 'Quantity must be greater than 0')
+                elif unit_cost_decimal < 0:
+                    messages.error(request, 'Unit cost cannot be negative')
+                else:
+                    # Update product cost price and stock
+                    product.cost_price = unit_cost_decimal
+                    product.adjust_stock(
+                        qty_decimal, 
+                        reason='purchase', 
+                        reference=reference
+                    )
+                    
+                    # Calculate total investment
+                    total_investment = qty_decimal * unit_cost_decimal
+                    
+                    messages.success(
+                        request, 
+                        f'Purchase recorded! Added {qty} units of {product.name}. '
+                        f'Total investment: ₹{total_investment:.2f}'
+                    )
+                    return redirect('inventory:stock_purchase')
+                    
+            except Product.DoesNotExist:
+                messages.error(request, 'Product not found')
+            except Exception as e:
+                messages.error(request, f'Error recording purchase: {e}')
     
     products = Product.objects.filter(track_stock=True).order_by('name')
     context = {

@@ -1,15 +1,20 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.db.models import Sum, Count
 from django.utils import timezone
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib import messages
+from django.db import transaction
 from datetime import datetime, timedelta
 from decimal import Decimal
 import openpyxl
 from openpyxl.styles import Font, Alignment
 import io
 
-from sales.models import Invoice, InvoiceItem
-from inventory.models import StockMovement
+from sales.models import Invoice, InvoiceItem, Customer
+from inventory.models import StockMovement, Product, Collection
+from profiles.models import ShopProfile
 
 
 def reports_dashboard(request):
@@ -66,8 +71,25 @@ def reports_dashboard(request):
 
 def monthly_summary(request):
     """Monthly summary report"""
-    year = int(request.GET.get('year', timezone.now().year))
-    month = int(request.GET.get('month', timezone.now().month))
+    # Get year and month with proper validation
+    year_str = request.GET.get('year', '')
+    month_str = request.GET.get('month', '')
+    
+    # Use current year/month if empty or invalid
+    current_date = timezone.now()
+    try:
+        year = int(year_str) if year_str else current_date.year
+    except (ValueError, TypeError):
+        year = current_date.year
+    
+    try:
+        month = int(month_str) if month_str else current_date.month
+    except (ValueError, TypeError):
+        month = current_date.month
+    
+    # Validate month range
+    if month < 1 or month > 12:
+        month = current_date.month
     
     # Create date range for the month
     start_date = datetime(year, month, 1)
@@ -180,8 +202,25 @@ def export_sales(request, format):
 
 def export_monthly(request, format):
     """Export monthly summary"""
-    year = int(request.GET.get('year', timezone.now().year))
-    month = int(request.GET.get('month', timezone.now().month))
+    # Get year and month with proper validation
+    year_str = request.GET.get('year', '')
+    month_str = request.GET.get('month', '')
+    
+    # Use current year/month if empty or invalid
+    current_date = timezone.now()
+    try:
+        year = int(year_str) if year_str else current_date.year
+    except (ValueError, TypeError):
+        year = current_date.year
+    
+    try:
+        month = int(month_str) if month_str else current_date.month
+    except (ValueError, TypeError):
+        month = current_date.month
+    
+    # Validate month range
+    if month < 1 or month > 12:
+        month = current_date.month
     
     start_date = datetime(year, month, 1)
     if month == 12:
@@ -279,3 +318,76 @@ def export_monthly_xlsx(invoices, start_date):
     )
     response['Content-Disposition'] = f'attachment; filename="monthly_summary_{start_date.strftime("%Y_%m")}.xlsx"'
     return response
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def factory_reset(request):
+    """Factory reset - delete all data and reset to initial state"""
+    try:
+        with transaction.atomic():
+            # Delete all data in order (respecting foreign key constraints)
+            
+            # 1. Delete invoice items first
+            InvoiceItem.objects.all().delete()
+            
+            # 2. Delete invoices
+            Invoice.objects.all().delete()
+            
+            # 3. Delete customers
+            Customer.objects.all().delete()
+            
+            # 4. Delete stock movements
+            StockMovement.objects.all().delete()
+            
+            # 5. Delete products
+            Product.objects.all().delete()
+            
+            # 6. Delete collections
+            Collection.objects.all().delete()
+            
+            # 7. Reset shop profile to default
+            try:
+                shop_profile = ShopProfile.objects.first()
+                if shop_profile:
+                    shop_profile.shop_name = 'My Shop'
+                    shop_profile.address = 'Your Shop Address'
+                    shop_profile.phone = 'Your Phone Number'
+                    shop_profile.gstin = 'Your GSTIN'
+                    shop_profile.invoice_prefix = 'INV'
+                    shop_profile.last_invoice_number = 0
+                    shop_profile.inventory_password = 'admin123'
+                    shop_profile.save()
+                else:
+                    # Create new shop profile if none exists
+                    ShopProfile.objects.create(
+                        shop_name='My Shop',
+                        address='Your Shop Address',
+                        phone='Your Phone Number',
+                        gstin='Your GSTIN',
+                        invoice_prefix='INV',
+                        last_invoice_number=0,
+                        inventory_password='admin123'
+                    )
+            except Exception as e:
+                # If shop profile doesn't exist, create it
+                ShopProfile.objects.create(
+                    shop_name='My Shop',
+                    address='Your Shop Address',
+                    phone='Your Phone Number',
+                    gstin='Your GSTIN',
+                    invoice_prefix='INV',
+                    last_invoice_number=0,
+                    inventory_password='admin123'
+                )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'System has been reset to factory defaults successfully!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error during factory reset: {str(e)}'
+        }, status=500)

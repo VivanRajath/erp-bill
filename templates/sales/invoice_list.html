@@ -19,7 +19,6 @@
                             <th>Date</th>
                             <th>Customer</th>
                             <th class="text-end">Amount</th>
-                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -32,17 +31,6 @@
                             <td>{{ invoice.date|date:"d M Y" }}</td>
                             <td>{{ invoice.get_customer_display_name }}</td>
                             <td class="text-end">₹{{ invoice.total_incl }}</td>
-                            <td>
-                                {% if invoice.payment_status == 'paid' %}
-                                    <span class="badge bg-success">Paid</span>
-                                {% elif invoice.payment_status == 'pending' %}
-                                    <span class="badge bg-warning">Pending</span>
-                                {% elif invoice.payment_status == 'partial' %}
-                                    <span class="badge bg-info">Partial</span>
-                                {% else %}
-                                    <span class="badge bg-danger">{{ invoice.get_payment_status_display }}</span>
-                                {% endif %}
-                            </td>
                             <td>
                                 <a href="{% url 'sales:invoice_detail' invoice.id %}" class="btn btn-sm btn-outline-primary">View</a>
                                 <a href="{% url 'sales:invoice_print' invoice.id %}" class="btn btn-sm btn-outline-secondary" target="_blank">Print</a>

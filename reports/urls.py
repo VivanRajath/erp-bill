@@ -13,4 +13,7 @@ urlpatterns = [
     # Export functionality
     path('export/sales/<str:format>/', views.export_sales, name='export_sales'),
     path('export/monthly/<str:format>/', views.export_monthly, name='export_monthly'),
+    
+    # Factory reset
+    path('factory-reset/', views.factory_reset, name='factory_reset'),
 ]
