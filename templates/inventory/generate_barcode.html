@@ -1,0 +1,280 @@
+{% extends 'base.html' %}
+
+{% block title %}Generate Barcode - {{ product.name }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .barcode-preview {
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        background: #f8f9fa;
+    }
+    
+    .barcode-options {
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+    }
+    
+    @media print {
+        .no-print { display: none !important; }
+        .barcode-container { 
+            page-break-inside: avoid; 
+            margin: 20px; 
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📊 Generate Barcode</h2>
+    <div class="no-print">
+        <a href="{% url 'inventory:product_list' %}" class="btn btn-outline-secondary me-2">← Back to Products</a>
+        <a href="{% url 'inventory:inventory_dashboard' %}" class="btn btn-outline-primary">🏠 Dashboard</a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Product Information -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">📦 Product Information</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Name:</dt>
+                    <dd class="col-sm-8">{{ product.name }}</dd>
+                    
+                    <dt class="col-sm-4">SKU:</dt>
+                    <dd class="col-sm-8"><code>{{ product.sku }}</code></dd>
+                    
+                    <dt class="col-sm-4">Price:</dt>
+                    <dd class="col-sm-8">₹{{ product.price_incl_tax }}</dd>
+                    
+                    <dt class="col-sm-4">Barcode:</dt>
+                    <dd class="col-sm-8">
+                        {% if product.barcode_value %}
+                            <code>{{ product.barcode_value }}</code>
+                        {% else %}
+                            <span class="text-muted">Not set</span>
+                        {% endif %}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+        
+        <!-- Barcode Options -->
+        <div class="card barcode-options no-print">
+            <div class="card-header">
+                <h5 class="mb-0">⚙️ Barcode Options</h5>
+            </div>
+            <div class="card-body">
+                <form id="barcodeForm">
+                    <div class="mb-3">
+                        <label class="form-label">Barcode Type</label>
+                        <select class="form-select" id="barcodeType">
+                            <option value="code128">Code 128 (Recommended)</option>
+                            <option value="ean13">EAN-13</option>
+                            <option value="code39">Code 39</option>
+                            <option value="upca">UPC-A</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Include Text</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="includeText" checked>
+                            <label class="form-check-label" for="includeText">
+                                Show barcode number below barcode
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Include Product Name</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="includeProductName" checked>
+                            <label class="form-check-label" for="includeProductName">
+                                Show product name above barcode
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Include Price</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="includePrice" checked>
+                            <label class="form-check-label" for="includePrice">
+                                Show price below barcode
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-primary" onclick="generateBarcode()">
+                            🔄 Generate Preview
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="window.print()">
+                            🖨️ Print Barcode
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Barcode Preview -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">👁️ Barcode Preview</h5>
+                <div class="no-print">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="downloadBarcode()">
+                        💾 Download
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="barcode-preview" id="barcodePreview">
+                    <div class="barcode-container" id="barcodeContainer">
+                        <!-- Generated barcode will appear here -->
+                        <div class="text-muted">
+                            <i class="fas fa-barcode fa-3x mb-3"></i>
+                            <p>Click "Generate Preview" to see the barcode</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="card mt-4 no-print">
+            <div class="card-header">
+                <h5 class="mb-0">📋 Instructions</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        <strong>Preview:</strong> Adjust options and click "Generate Preview" to see changes
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        <strong>Print:</strong> Use "Print Barcode" button for best quality printing
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        <strong>Stickers:</strong> Visit the barcode labels page for A4 sticker sheets
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        <strong>Code 128:</strong> Recommended for most products (alphanumeric support)
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<script>
+let currentBarcode = null;
+
+function generateBarcode() {
+    const barcodeValue = '{{ product.barcode_value|default:product.sku }}';
+    const productName = '{{ product.name }}';
+    const productPrice = '₹{{ product.price_incl_tax }}';
+    const barcodeType = document.getElementById('barcodeType').value;
+    const includeText = document.getElementById('includeText').checked;
+    const includeProductName = document.getElementById('includeProductName').checked;
+    const includePrice = document.getElementById('includePrice').checked;
+    
+    // Clear previous barcode
+    const container = document.getElementById('barcodeContainer');
+    container.innerHTML = '';
+    
+    // Create barcode elements
+    if (includeProductName) {
+        const nameDiv = document.createElement('div');
+        nameDiv.style.cssText = 'font-weight: bold; margin-bottom: 8px; font-size: 14px;';
+        nameDiv.textContent = productName;
+        container.appendChild(nameDiv);
+    }
+    
+    // Create SVG for barcode
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.style.margin = '10px 0';
+    container.appendChild(svg);
+    
+    // Generate barcode
+    try {
+        JsBarcode(svg, barcodeValue, {
+            format: barcodeType.toUpperCase(),
+            width: 2,
+            height: 60,
+            displayValue: includeText,
+            fontSize: 12,
+            margin: 0
+        });
+        
+        currentBarcode = svg;
+    } catch (error) {
+        container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i>
+                Error generating barcode: ${error.message}
+            </div>
+        `;
+        return;
+    }
+    
+    // Add price if requested
+    if (includePrice) {
+        const priceDiv = document.createElement('div');
+        priceDiv.style.cssText = 'font-weight: bold; margin-top: 8px; font-size: 14px; color: #28a745;';
+        priceDiv.textContent = productPrice;
+        container.appendChild(priceDiv);
+    }
+}
+
+function downloadBarcode() {
+    if (!currentBarcode) {
+        alert('Please generate a barcode first');
+        return;
+    }
+    
+    // Create canvas and convert SVG to image
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const data = new XMLSerializer().serializeToString(currentBarcode);
+    const img = new Image();
+    
+    img.onload = function() {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        
+        // Download the image
+        const link = document.createElement('a');
+        link.download = `barcode_{{ product.sku }}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+    };
+    
+    img.src = 'data:image/svg+xml;base64,' + btoa(data);
+}
+
+// Generate initial barcode
+document.addEventListener('DOMContentLoaded', function() {
+    {% if product.barcode_value %}
+        generateBarcode();
+    {% endif %}
+});
+</script>
+{% endblock %}

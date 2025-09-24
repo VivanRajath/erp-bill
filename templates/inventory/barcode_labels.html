@@ -1,0 +1,343 @@
+{% extends 'base.html' %}
+
+{% block title %}Barcode Labels - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-selector {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+    }
+    
+    .product-item {
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .product-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .product-item.selected {
+        background-color: #e3f2fd;
+        border-color: #2196f3;
+    }
+    
+    .label-preview {
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        background: #f8f9fa;
+        min-height: 400px;
+    }
+    
+    .label-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin: 20px 0;
+    }
+    
+    .label-item {
+        border: 1px solid #ccc;
+        padding: 10px;
+        text-align: center;
+        background: white;
+        border-radius: 4px;
+    }
+    
+    @media print {
+        .no-print { display: none !important; }
+        .label-preview {
+            border: none;
+            background: white;
+            min-height: auto;
+        }
+        body { margin: 0; }
+        .card { box-shadow: none; border: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📊 Barcode Labels</h2>
+    <div class="no-print">
+        <a href="{% url 'inventory:inventory_dashboard' %}" class="btn btn-outline-secondary">🏠 Dashboard</a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Product Selection -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">📦 Select Products</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="productSearch" 
+                           placeholder="Search products..." onkeyup="filterProducts()">
+                </div>
+                
+                <div class="product-selector" id="productList">
+                    {% for product in products %}
+                    <div class="product-item" data-id="{{ product.id }}" onclick="toggleProduct(this)">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <strong>{{ product.name }}</strong><br>
+                                <small class="text-muted">SKU: {{ product.sku }}</small><br>
+                                <small class="text-success">₹{{ product.price_incl_tax }}</small>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       id="product_{{ product.id }}" 
+                                       data-name="{{ product.name }}"
+                                       data-sku="{{ product.sku }}"
+                                       data-barcode="{{ product.barcode_value }}"
+                                       data-price="{{ product.price_incl_tax }}">
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-barcode fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">No products with barcodes found</p>
+                        <a href="{% url 'inventory:product_add' %}" class="btn btn-sm btn-primary">Add Products</a>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="mt-3">
+                    <button class="btn btn-outline-primary btn-sm" onclick="selectAll()">Select All</button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="clearAll()">Clear All</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Label Options -->
+        <div class="card no-print">
+            <div class="card-header">
+                <h5 class="mb-0">⚙️ Label Options</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Labels per Product</label>
+                    <input type="number" class="form-control" id="labelsPerProduct" 
+                           value="1" min="1" max="10" onchange="updatePreview()">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Label Size</label>
+                    <select class="form-select" id="labelSize" onchange="updatePreview()">
+                        <option value="small">Small (65mm x 38mm)</option>
+                        <option value="medium" selected>Medium (70mm x 42mm)</option>
+                        <option value="large">Large (99mm x 57mm)</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="includeProductName" 
+                               checked onchange="updatePreview()">
+                        <label class="form-check-label" for="includeProductName">
+                            Include Product Name
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="includePrice" 
+                               checked onchange="updatePreview()">
+                        <label class="form-check-label" for="includePrice">
+                            Include Price
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="updatePreview()">
+                        🔄 Update Preview
+                    </button>
+                    <button class="btn btn-success" onclick="window.print()">
+                        🖨️ Print Labels
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Label Preview -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">👁️ Label Preview</h5>
+            </div>
+            <div class="card-body">
+                <div class="label-preview">
+                    <div id="labelContainer">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-tags fa-3x mb-3"></i>
+                            <p>Select products and click "Update Preview" to see labels</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<script>
+function filterProducts() {
+    const search = document.getElementById('productSearch').value.toLowerCase();
+    const products = document.querySelectorAll('.product-item');
+    
+    products.forEach(product => {
+        const text = product.textContent.toLowerCase();
+        product.style.display = text.includes(search) ? 'block' : 'none';
+    });
+}
+
+function toggleProduct(element) {
+    const checkbox = element.querySelector('input[type="checkbox"]');
+    checkbox.checked = !checkbox.checked;
+    element.classList.toggle('selected', checkbox.checked);
+}
+
+function selectAll() {
+    const checkboxes = document.querySelectorAll('.product-item input[type="checkbox"]');
+    const items = document.querySelectorAll('.product-item');
+    
+    checkboxes.forEach((cb, index) => {
+        if (items[index].style.display !== 'none') {
+            cb.checked = true;
+            items[index].classList.add('selected');
+        }
+    });
+}
+
+function clearAll() {
+    const checkboxes = document.querySelectorAll('.product-item input[type="checkbox"]');
+    const items = document.querySelectorAll('.product-item');
+    
+    checkboxes.forEach((cb, index) => {
+        cb.checked = false;
+        items[index].classList.remove('selected');
+    });
+}
+
+function updatePreview() {
+    const selectedProducts = Array.from(document.querySelectorAll('.product-item input[type="checkbox"]:checked'));
+    const labelsPerProduct = parseInt(document.getElementById('labelsPerProduct').value);
+    const labelSize = document.getElementById('labelSize').value;
+    const includeProductName = document.getElementById('includeProductName').checked;
+    const includePrice = document.getElementById('includePrice').checked;
+    
+    const container = document.getElementById('labelContainer');
+    container.innerHTML = '';
+    
+    if (selectedProducts.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted">
+                <i class="fas fa-info-circle fa-2x mb-3"></i>
+                <p>Please select products to generate labels</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Create label grid
+    const grid = document.createElement('div');
+    grid.className = 'label-grid';
+    
+    // Set grid columns based on label size
+    const columns = labelSize === 'large' ? 2 : (labelSize === 'medium' ? 3 : 4);
+    grid.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+    
+    selectedProducts.forEach(checkbox => {
+        const productName = checkbox.dataset.name;
+        const sku = checkbox.dataset.sku;
+        const barcode = checkbox.dataset.barcode;
+        const price = checkbox.dataset.price;
+        
+        for (let i = 0; i < labelsPerProduct; i++) {
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'label-item';
+            
+            // Set label size
+            let height;
+            switch (labelSize) {
+                case 'small': height = '120px'; break;
+                case 'large': height = '180px'; break;
+                default: height = '150px'; // medium
+            }
+            labelDiv.style.height = height;
+            
+            // Add product name
+            if (includeProductName) {
+                const nameDiv = document.createElement('div');
+                nameDiv.style.cssText = 'font-size: 10px; font-weight: bold; margin-bottom: 5px; word-wrap: break-word;';
+                nameDiv.textContent = productName.length > 25 ? productName.substring(0, 25) + '...' : productName;
+                labelDiv.appendChild(nameDiv);
+            }
+            
+            // Add barcode
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.style.margin = '2px 0';
+            labelDiv.appendChild(svg);
+            
+            try {
+                JsBarcode(svg, barcode, {
+                    format: 'CODE128',
+                    width: labelSize === 'large' ? 1.5 : 1,
+                    height: labelSize === 'large' ? 40 : (labelSize === 'medium' ? 30 : 25),
+                    displayValue: true,
+                    fontSize: labelSize === 'large' ? 10 : 8,
+                    margin: 0
+                });
+            } catch (error) {
+                console.error('Barcode generation error:', error);
+                labelDiv.innerHTML += `<div style="color: red; font-size: 8px;">Error: ${error.message}</div>`;
+            }
+            
+            // Add price
+            if (includePrice) {
+                const priceDiv = document.createElement('div');
+                priceDiv.style.cssText = 'font-size: 10px; font-weight: bold; color: #28a745; margin-top: 2px;';
+                priceDiv.textContent = `₹${price}`;
+                labelDiv.appendChild(priceDiv);
+            }
+            
+            grid.appendChild(labelDiv);
+        }
+    });
+    
+    container.appendChild(grid);
+    
+    // Add summary
+    const summary = document.createElement('div');
+    summary.className = 'text-center mt-3 no-print';
+    summary.innerHTML = `
+        <small class="text-muted">
+            ${selectedProducts.length} products × ${labelsPerProduct} labels = ${selectedProducts.length * labelsPerProduct} total labels
+        </small>
+    `;
+    container.appendChild(summary);
+}
+
+// Auto-update preview when checkboxes change
+document.addEventListener('change', function(e) {
+    if (e.target.type === 'checkbox' && e.target.closest('.product-item')) {
+        e.target.closest('.product-item').classList.toggle('selected', e.target.checked);
+    }
+});
+</script>
+{% endblock %}
