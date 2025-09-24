@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }} | Billing{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-4">{{ page_title }}</h5>
+                <form method="post" class="row g-3">
+                    {% csrf_token %}
+                    <div class="col-md-8">
+                        <label class="form-label">Name</label>
+                        <input type="text" name="name" value="{{ product.name|default:'' }}" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Barcode (optional)</label>
+                        <input type="text" name="barcode_value" value="{{ product.barcode_value|default:'' }}" class="form-control" placeholder="Auto if empty">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Collection</label>
+                        <select name="collection" class="form-select">
+                            <option value="">-- Select Collection --</option>
+                            <option value="Banaras" {% if product.collection and product.collection.name == 'Banaras' %}selected{% endif %}>Banaras</option>
+                            <option value="Kanchivaram" {% if product.collection and product.collection.name == 'Kanchivaram' %}selected{% endif %}>Kanchivaram</option>
+                            <option value="Designer" {% if product.collection and product.collection.name == 'Designer' %}selected{% endif %}>Designer</option>
+                            <option value="Cotton" {% if product.collection and product.collection.name == 'Cotton' %}selected{% endif %}>Cotton</option>
+                            <option value="CottonSilk" {% if product.collection and product.collection.name == 'CottonSilk' %}selected{% endif %}>CottonSilk</option>
+                            <option value="Silk" {% if product.collection and product.collection.name == 'Silk' %}selected{% endif %}>Silk</option>
+                            <option value="Ilkal" {% if product.collection and product.collection.name == 'Ilkal' %}selected{% endif %}>Ilkal</option>
+                            <option value="Others" {% if product.collection and product.collection.name == 'Others' %}selected{% endif %}>Others</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Cost Price</label>
+                        <input type="number" step="0.01" name="cost_price" value="{{ product.cost_price|default:'0.00' }}" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Selling Price (Incl. Tax)</label>
+                        <input type="number" step="0.01" name="price_incl_tax" value="{{ product.price_incl_tax|default:'' }}" class="form-control" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Tax Rate (%)</label>
+                        <input type="number" step="0.01" name="tax_rate" value="{{ product.tax_rate|default:'5.0' }}" class="form-control" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Initial Stock</label>
+                        <input type="number" step="0.001" name="stock_quantity" value="{{ product.stock_quantity|default:'0' }}" class="form-control">
+                    </div>
+                    <div class="col-12 d-flex gap-2 mt-3">
+                        <a href="{% url 'inventory:product_list' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    </div>
+{% endblock %}
+

@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }} | Billing{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-4">{{ page_title }}</h5>
+                <form method="post" class="row g-3">
+                    {% csrf_token %}
+                    <div class="col-12">
+                        <label class="form-label">Product</label>
+                        <select name="product_id" class="form-select" required>
+                            <option value="">-- Select Product --</option>
+                            {% for p in products %}
+                            <option value="{{ p.id }}">{{ p.name }} {% if p.sku %} ({{ p.sku }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" step="0.001" name="qty" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Unit Cost</label>
+                        <input type="number" step="0.01" name="unit_cost" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Reference</label>
+                        <input type="text" name="reference" class="form-control" placeholder="Purchase invoice #">
+                    </div>
+                    <div class="col-12 d-flex gap-2 mt-3">
+                        <a href="{% url 'inventory:inventory_dashboard' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save Purchase</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

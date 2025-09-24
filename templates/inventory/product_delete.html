@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }} | Billing{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card border-danger">
+            <div class="card-body">
+                <h5 class="card-title text-danger">{{ page_title }}</h5>
+                <p>Are you sure you want to delete <strong>{{ product.name }}</strong>?</p>
+                <form method="post" class="d-flex gap-2">
+                    {% csrf_token %}
+                    <a href="{% url 'inventory:product_list' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

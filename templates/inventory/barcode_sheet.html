@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }} | Billing{% endblock %}
+{% block extra_css %}
+<style>
+    .sheet { page-break-after: always; }
+    .label-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .label { border: 1px dashed #dee2e6; border-radius: 6px; padding: 6px; text-align: center; min-height: 80px; }
+    @media print {
+        .no-print { display: none !important; }
+        .label { border: 0; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">{{ page_title }}</h5>
+    <div class="no-print d-flex gap-2">
+        <button class="btn btn-outline-secondary" onclick="addLabel()">+ Add Label</button>
+        <button class="btn btn-primary" onclick="window.print()">🖨️ Print A4</button>
+    </div>
+</div>
+
+<div class="card no-print mb-3">
+    <div class="card-body">
+        <form id="labelsForm" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Product</label>
+                <select id="productId" class="form-select">
+                    {% for p in products %}
+                    <option value="{{ p.id }}" data-name="{{ p.name|escape }}" data-price="{{ p.price_incl_tax }}" data-barcode="{{ p.barcode_value|default:p.sku|escape }}">{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+                <div class="mt-2" id="currentPreview"></div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Quantity</label>
+                <input id="labelQty" type="number" min="1" value="1" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Include</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="incName" checked>
+                    <label class="form-check-label" for="incName">Product Name</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="incPrice" checked>
+                    <label class="form-check-label" for="incPrice">Price</label>
+                </div>
+            </div>
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button type="button" class="btn btn-success w-100" onclick="addLabelsForProduct()">Add Qty</button>
+                <button type="button" class="btn btn-outline-primary w-100" onclick="addLabelsByStock()">Add By Stock</button>
+            </div>
+        </form>
+    </div>
+    </div>
+
+<div id="sheets"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('productId');
+    sel.addEventListener('change', updatePreview);
+    updatePreview();
+});
+
+function createLabel({ name, price, barcode }) {
+    const label = document.createElement('div');
+    label.className = 'label';
+    const incName = document.getElementById('incName').checked;
+    const incPrice = document.getElementById('incPrice').checked;
+
+    if (incName) {
+        const n = document.createElement('div');
+        n.style.fontWeight = '600';
+        n.style.fontSize = '12px';
+        n.textContent = name;
+        label.appendChild(n);
+    }
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.style.margin = '4px 0';
+    label.appendChild(svg);
+
+    JsBarcode(svg, barcode, { format: 'CODE128', width: 2, height: 40, displayValue: false, margin: 0 });
+
+    if (incPrice) {
+        const p = document.createElement('div');
+        p.style.fontWeight = '600';
+        p.style.fontSize = '12px';
+        p.textContent = `₹${price}`;
+        label.appendChild(p);
+    }
+    return label;
+}
+
+function addLabelsForProduct() {
+    const sel = document.getElementById('productId');
+    const opt = sel.options[sel.selectedIndex];
+    const qty = parseInt(document.getElementById('labelQty').value || '1', 10);
+    const data = { name: opt.dataset.name, price: opt.dataset.price, barcode: opt.dataset.barcode };
+    appendLabels([data], qty);
+}
+
+function updatePreview() {
+    const sel = document.getElementById('productId');
+    if (!sel || sel.selectedIndex < 0) return;
+    const opt = sel.options[sel.selectedIndex];
+    const name = opt.dataset.name || '';
+    const barcode = opt.dataset.barcode || '';
+    const price = opt.dataset.price || '';
+    const wrap = document.getElementById('currentPreview');
+    wrap.innerHTML = '';
+    if (!barcode) return;
+    const container = document.createElement('div');
+    container.className = 'label';
+    const n = document.createElement('div');
+    n.style.fontWeight = '600'; n.style.fontSize = '12px'; n.textContent = name; container.appendChild(n);
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.style.margin = '4px 0'; container.appendChild(svg);
+    try { JsBarcode(svg, barcode, { format: 'CODE128', width: 2, height: 40, displayValue: false, margin: 0 }); } catch (e) {}
+    const p = document.createElement('div'); p.style.fontWeight = '600'; p.style.fontSize = '12px'; p.textContent = `₹${price}`; container.appendChild(p);
+    wrap.appendChild(container);
+}
+
+function addLabel() {
+    const sel = document.getElementById('productId');
+    const opt = sel.options[sel.selectedIndex];
+    const data = { name: opt.dataset.name, price: opt.dataset.price, barcode: opt.dataset.barcode };
+    appendLabels([data], 1);
+}
+
+function addLabelsByStock() {
+    const sel = document.getElementById('productId');
+    const opt = sel.options[sel.selectedIndex];
+    const data = { name: opt.dataset.name, price: opt.dataset.price, barcode: opt.dataset.barcode };
+    const name = opt.dataset.name;
+    // Best-effort fetch to get stock count
+    fetch(`/api/product-lookup/?q=${encodeURIComponent(data.barcode)}`)
+        .then(r => r.json())
+        .then(info => {
+            const stock = info.stock || 1;
+            appendLabels([data], stock);
+        })
+        .catch(() => {
+            // fallback of 1
+            appendLabels([data], 1);
+        });
+}
+
+function appendLabels(items, totalCount) {
+    const perPage = 30; // 3 columns x 10 rows
+    const sheets = document.getElementById('sheets');
+    let remaining = totalCount;
+    while (remaining > 0) {
+        const pageCount = Math.min(perPage, remaining);
+        const sheet = document.createElement('div');
+        sheet.className = 'sheet';
+        const grid = document.createElement('div');
+        grid.className = 'label-grid';
+        sheet.appendChild(grid);
+        for (let i = 0; i < pageCount; i++) {
+            grid.appendChild(createLabel(items[0]));
+        }
+        sheets.appendChild(sheet);
+        remaining -= pageCount;
+    }
+}
+</script>
+{% endblock %}
+

@@ -2,10 +2,23 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from decimal import Decimal, ROUND_HALF_UP
 
+class Collection(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Collection'
+        verbose_name_plural = 'Collections'
+
+    def __str__(self):
+        return self.name
+
 
 class Product(models.Model):
     name = models.CharField(max_length=200)
-    sku = models.CharField(max_length=50, unique=True, help_text="Stock Keeping Unit")
+    collection = models.ForeignKey('Collection', on_delete=models.SET_NULL, blank=True, null=True, related_name='products')
+    sku = models.CharField(max_length=50, unique=True, blank=True, null=True, help_text="Stock Keeping Unit")
     barcode_value = models.CharField(max_length=100, unique=True, blank=True, null=True)
     price_incl_tax = models.DecimalField(
         max_digits=10, 
@@ -40,7 +53,7 @@ class Product(models.Model):
         verbose_name_plural = "Products"
     
     def __str__(self):
-        return f"{self.name} ({self.sku})"
+        return f"{self.name} ({self.sku or 'SKU'})"
     
     @property
     def base_price(self):
@@ -61,7 +74,7 @@ class Product(models.Model):
             return True
         return self.stock_quantity >= quantity
     
-    def adjust_stock(self, quantity_change, reason="adjustment"):
+    def adjust_stock(self, quantity_change, reason="adjustment", reference=None):
         """Adjust stock quantity and create stock movement record"""
         if self.track_stock:
             self.stock_quantity += quantity_change
@@ -71,8 +84,40 @@ class Product(models.Model):
                 product=self,
                 qty_change=quantity_change,
                 reason=reason,
-                unit_cost=self.cost_price if quantity_change > 0 else None
+                unit_cost=self.cost_price if quantity_change > 0 else None,
+                reference=reference
             )
+
+    def save(self, *args, **kwargs):
+        """Auto-generate SKU and barcode if not provided."""
+        creating = self.pk is None
+        # First save to get an ID if creating
+        if creating and (self.sku is None or self.sku == '' or self.barcode_value is None or self.barcode_value == ''):
+            super().save(*args, **kwargs)
+            # Now we have an ID
+            if not self.sku:
+                # SKU from name and collection prefix + ID
+                prefix_name = (self.name or 'PRD').upper().replace(' ', '')[:3]
+                prefix_coll = (self.collection.name if self.collection else 'GEN').upper().replace(' ', '')[:3]
+                self.sku = f"{prefix_name}{prefix_coll}{self.pk:06d}"
+            if not self.barcode_value:
+                # Barcode from name+collection initials + zero-padded id
+                bname = (self.name or 'PRODUCT').upper().replace(' ', '')
+                bcoll = (self.collection.name if self.collection else 'GEN').upper().replace(' ', '')
+                self.barcode_value = f"{bname[:3]}{bcoll[:3]}{self.pk:06d}"
+            # Save again with generated fields
+            return super().save(update_fields=['sku', 'barcode_value'])
+        else:
+            # For updates or when provided
+            if not self.sku and self.pk:
+                prefix_name = (self.name or 'PRD').upper().replace(' ', '')[:3]
+                prefix_coll = (self.collection.name if self.collection else 'GEN').upper().replace(' ', '')[:3]
+                self.sku = f"{prefix_name}{prefix_coll}{self.pk:06d}"
+            if not self.barcode_value and self.pk:
+                bname = (self.name or 'PRODUCT').upper().replace(' ', '')
+                bcoll = (self.collection.name if self.collection else 'GEN').upper().replace(' ', '')
+                self.barcode_value = f"{bname[:3]}{bcoll[:3]}{self.pk:06d}"
+            return super().save(*args, **kwargs)
 
 
 class StockMovement(models.Model):

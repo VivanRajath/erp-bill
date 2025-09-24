@@ -81,6 +81,25 @@
                 </div>
             </div>
         </div>
+
+        <!-- Barcode Lookup (Info only) -->
+        <div class="card mb-4" id="lookupSection">
+            <div class="card-header">
+                <h6 class="card-title mb-0">🔎 Check Item by Barcode (Info only)</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label">Enter/Scan Barcode</label>
+                        <input type="text" id="lookupBarcode" class="form-control" placeholder="Scan barcode to get item info">
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-outline-primary w-100" onclick="lookupItem()">Check</button>
+                    </div>
+                </div>
+                <div id="lookupResult" class="mt-3 text-muted"></div>
+            </div>
+        </div>
         
         <!-- Recent Products (Quick Add) -->
         <div class="card">
@@ -202,6 +221,35 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Item Modal -->
+<div class="modal fade" id="editItemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2"><strong id="editDescription"></strong></div>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label class="form-label">Price (incl. GST)</label>
+                        <input type="number" class="form-control" id="editPrice" min="0.01" step="0.01">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">GST Rate (%)</label>
+                        <input type="number" class="form-control" id="editTax" min="0" max="28" step="0.01">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveEditItem()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -236,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Keep focus on barcode input
     document.addEventListener('click', function(e) {
-        if (!e.target.closest('.modal') && !e.target.closest('#searchResults')) {
+        if (!e.target.closest('.modal') && !e.target.closest('#searchResults') && !e.target.closest('#lookupSection')) {
             setTimeout(() => barcodeInput.focus(), 100);
         }
     });
@@ -295,6 +343,24 @@ function showSearchResults(products) {
     });
     
     resultsDiv.classList.remove('d-none');
+}
+
+function lookupItem() {
+    const code = document.getElementById('lookupBarcode').value.trim();
+    if (!code) return;
+    fetch(`/api/product-lookup/?q=${encodeURIComponent(code)}`)
+      .then(r => r.json())
+      .then(data => {
+        const box = document.getElementById('lookupResult');
+        if (data.error) { box.innerHTML = `<span class="text-danger">${data.error}</span>`; return; }
+        if (data.multiple && data.products && data.products.length) {
+            const p = data.products[0];
+            box.innerHTML = `<div><strong>${p.name}</strong> — SKU: ${p.sku} — ₹${p.price} ${p.stock !== null ? `(Stock: ${p.stock})` : ''}</div>`;
+        } else {
+            box.innerHTML = `<div><strong>${data.name}</strong> — SKU: ${data.sku} — ₹${data.price} ${data.stock !== null ? `(Stock: ${data.stock})` : ''}</div>`;
+        }
+      })
+      .catch(() => { document.getElementById('lookupResult').textContent = 'Lookup failed'; });
 }
 
 // Hide search results
@@ -361,7 +427,8 @@ function updateCartDisplay() {
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
                         <h6 class="mb-1">${item.description}</h6>
-                        <small class="text-muted">₹${item.unit_price.toFixed(2)} × ${item.quantity} ${item.unit}</small>
+                        <small class="text-muted d-block">Price × Qty: ₹${item.unit_price.toFixed(2)} × ${item.quantity} ${item.unit} (GST ${item.tax_rate}%)</small>
+                        <button class="btn btn-sm btn-outline-primary mt-1" onclick="openEditItem(${index})">Edit price/tax</button>
                     </div>
                     <div class="text-end">
                         <span class="fw-bold">₹${totalPrice.toFixed(2)}</span>
@@ -387,6 +454,30 @@ function updateCartDisplay() {
     }
     
     updateCartTotals();
+}
+
+let editIndex = null;
+function openEditItem(index) {
+    editIndex = index;
+    document.getElementById('editDescription').textContent = cart[index].description;
+    document.getElementById('editPrice').value = cart[index].unit_price.toFixed(2);
+    document.getElementById('editTax').value = cart[index].tax_rate;
+    const modal = new bootstrap.Modal(document.getElementById('editItemModal'));
+    modal.show();
+}
+
+function saveEditItem() {
+    if (editIndex === null) return;
+    const price = parseFloat(document.getElementById('editPrice').value);
+    const tax = parseFloat(document.getElementById('editTax').value);
+    if (!isNaN(price) && price >= 0.01) {
+        cart[editIndex].unit_price = price;
+    }
+    if (!isNaN(tax) && tax >= 0) {
+        cart[editIndex].tax_rate = tax;
+    }
+    updateCartDisplay();
+    bootstrap.Modal.getInstance(document.getElementById('editItemModal')).hide();
 }
 
 // Update cart totals

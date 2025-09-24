@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }} | Billing{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Invoice {{ invoice.number }}</h4>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="{% url 'sales:invoice_list' %}">Back</a>
+        <a class="btn btn-primary" href="{% url 'sales:invoice_print' invoice.id 'a4' %}">Print A4</a>
+        <a class="btn btn-primary" href="{% url 'sales:invoice_print' invoice.id 'a5' %}">Print A5</a>
+        <a class="btn btn-primary" href="{% url 'sales:invoice_print' invoice.id 'thermal' %}">Thermal</a>
+    </div>
+    </div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <h6 class="text-muted">Customer</h6>
+                <div><strong>{{ invoice.get_customer_display_name }}</strong></div>
+                {% if invoice.customer %}
+                    {% if invoice.customer.phone %}<div>📞 {{ invoice.customer.phone }}</div>{% endif %}
+                    {% if invoice.customer.email %}<div>📧 {{ invoice.customer.email }}</div>{% endif %}
+                    {% if invoice.customer.address %}<div>{{ invoice.customer.address|linebreaks }}</div>{% endif %}
+                    {% if invoice.customer.gstin %}<div><strong>GSTIN:</strong> {{ invoice.customer.gstin }}</div>{% endif %}
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-muted">Details</h6>
+                <div>Invoice #: <strong>{{ invoice.number }}</strong></div>
+                <div>Date: <strong>{{ invoice.date|date:"d M Y" }}</strong></div>
+                <div>Status: <span class="badge bg-secondary">{{ invoice.get_payment_status_display }}</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h6 class="mb-3">Items</h6>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Description</th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-end">Unit Price (Incl)</th>
+                        <th class="text-center">GST%</th>
+                        <th class="text-end">Base</th>
+                        <th class="text-end">GST</th>
+                        <th class="text-end">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in invoice.items.all %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            {{ item.description }}
+                            {% if item.product %}<div class="text-muted small">SKU: {{ item.product.sku }}</div>{% endif %}
+                        </td>
+                        <td class="text-center">{{ item.quantity }}</td>
+                        <td class="text-end">₹{{ item.unit_price_incl }}</td>
+                        <td class="text-center">{{ item.tax_rate }}%</td>
+                        <td class="text-end">₹{{ item.base_amount }}</td>
+                        <td class="text-end">₹{{ item.tax_amount }}</td>
+                        <td class="text-end">₹{{ item.total_amount }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted">No items.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="d-flex justify-content-end">
+            <table>
+                <tr><td class="pe-3">Subtotal:</td><td class="text-end">₹{{ invoice.total_base }}</td></tr>
+                <tr><td class="pe-3">GST:</td><td class="text-end">₹{{ invoice.total_tax }}</td></tr>
+                <tr><td class="pe-3 fw-bold">Total:</td><td class="text-end fw-bold">₹{{ invoice.total_incl }}</td></tr>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

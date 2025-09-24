@@ -7,7 +7,7 @@ from django.db import transaction, models
 from decimal import Decimal
 import io
 
-from .models import Product, StockMovement, BarcodeLabel
+from .models import Product, StockMovement, BarcodeLabel, Collection
 from profiles.models import ShopProfile
 
 
@@ -87,7 +87,39 @@ def product_add(request):
     if not request.session.get('inventory_authenticated'):
         return redirect('inventory:inventory_login')
     
-    context = {'page_title': 'Add Product'}
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        barcode_value = request.POST.get('barcode_value', '').strip() or None
+        collection_name = request.POST.get('collection', '').strip()
+        price_incl = request.POST.get('price_incl_tax', '').strip()
+        cost_price = request.POST.get('cost_price', '').strip()
+        tax_rate = request.POST.get('tax_rate', '').strip() or '5.0'
+        stock_quantity = request.POST.get('stock_quantity', '').strip() or '0'
+
+        if not name:
+            messages.error(request, 'Product name is required')
+        else:
+            collection = None
+            if collection_name:
+                collection, _ = Collection.objects.get_or_create(name=collection_name)
+            try:
+                product = Product.objects.create(
+                    name=name,
+                    collection=collection,
+                    barcode_value=barcode_value,
+                    price_incl_tax=Decimal(price_incl or '0'),
+                    tax_rate=Decimal(tax_rate),
+                    cost_price=Decimal(cost_price or '0'),
+                    track_stock=True,
+                    stock_quantity=Decimal(stock_quantity)
+                )
+                messages.success(request, 'Product created')
+                return redirect('inventory:product_list')
+            except Exception as e:
+                messages.error(request, f'Error creating product: {e}')
+
+    collections = Collection.objects.all()
+    context = {'page_title': 'Add Product', 'collections': collections}
     return render(request, 'inventory/product_form.html', context)
 
 
@@ -97,8 +129,38 @@ def product_edit(request, product_id):
         return redirect('inventory:inventory_login')
     
     product = get_object_or_404(Product, id=product_id)
+    if request.method == 'POST':
+        product.name = request.POST.get('name', '').strip()
+        product.barcode_value = request.POST.get('barcode_value', '').strip() or None
+        collection_name = request.POST.get('collection', '').strip()
+        price_incl = request.POST.get('price_incl_tax', '').strip()
+        cost_price = request.POST.get('cost_price', '').strip()
+        tax_rate = request.POST.get('tax_rate', '').strip() or '5.0'
+        stock_quantity = request.POST.get('stock_quantity', '').strip() or '0'
+
+        product.price_incl_tax = Decimal(price_incl or '0')
+        product.cost_price = Decimal(cost_price or '0')
+        product.tax_rate = Decimal(tax_rate)
+        product.stock_quantity = Decimal(stock_quantity)
+        if collection_name:
+            collection, _ = Collection.objects.get_or_create(name=collection_name)
+            product.collection = collection
+        else:
+            product.collection = None
+        if not product.name:
+            messages.error(request, 'Product name is required')
+        else:
+            try:
+                product.save()
+                messages.success(request, 'Product updated')
+                return redirect('inventory:product_list')
+            except Exception as e:
+                messages.error(request, f'Error updating product: {e}')
+
+    collections = Collection.objects.all()
     context = {
         'product': product,
+        'collections': collections,
         'page_title': f'Edit Product - {product.name}'
     }
     return render(request, 'inventory/product_form.html', context)
@@ -194,5 +256,9 @@ def print_barcode_sheet(request):
     if not request.session.get('inventory_authenticated'):
         return redirect('inventory:inventory_login')
     
-    context = {'page_title': 'Print Barcode Sheet'}
+    products = Product.objects.exclude(barcode_value__isnull=True).exclude(barcode_value='').order_by('name')
+    context = {
+        'page_title': 'Print Barcode Sheet',
+        'products': products,
+    }
     return render(request, 'inventory/barcode_sheet.html', context)

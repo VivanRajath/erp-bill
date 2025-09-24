@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }} | Billing{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-4">{{ page_title }}</h5>
+                <form method="post" class="row g-3">
+                    {% csrf_token %}
+                    <div class="col-md-6">
+                        <label class="form-label">Name</label>
+                        <input type="text" name="name" value="{{ customer.name|default:'' }}" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Phone</label>
+                        <input type="text" name="phone" value="{{ customer.phone|default:'' }}" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" value="{{ customer.email|default:'' }}" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">GSTIN</label>
+                        <input type="text" name="gstin" value="{{ customer.gstin|default:'' }}" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Address</label>
+                        <textarea name="address" rows="3" class="form-control">{{ customer.address|default:'' }}</textarea>
+                    </div>
+                    <div class="col-12 d-flex gap-2 mt-3">
+                        <a href="{% url 'sales:customer_list' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
